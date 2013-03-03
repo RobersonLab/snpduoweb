@@ -1,14 +1,12 @@
 #!/usr/bin/perl -wT
 
 ########################################
-#
 #	SNPduo.cgi
 #	Author: Eli Roberson
 #	Created: September 04, 2007 
-#	Last Edit: November 07, 2008 - ER
-#
+#	Last Edit: March 09, 2012 - ER
 ########################################
-#  Copyright (c)  2007-2008 Elisha Roberson and Jonathan Pevsner.
+#  Copyright (c)  2007-2012 Elisha Roberson and Jonathan Pevsner.
 #                 All Rights Reserved.
 #
 #  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS "AS IS" AND ANY 
@@ -28,45 +26,56 @@
 #  LOCATED IN THE COUNTY OF BALTIMORE CITY, MARYLAND. USE OF THIS SOFTWARE
 #  IMPLIES ACCEPTANCE OF THIS CONTRACT.
 ########################################
-use constant RENAME => "TRUE";
-use constant PERLMAGICK => "TRUE";
+use constant RENAME => "TRUE"; # Rename can be used if the upload and output directories are on THE SAME PARTITION. Otherwise this must be set to FALSE
+use constant CAIRO => "TRUE"; # Use CAIRO png utility in R. If set, this overrides PERLMAGICK directive. Requires png(type="cairo") support in R
+use constant PERLMAGICK => "FALSE"; # Use PerlMagick for image conversion. Overrode by CAIRO "TRUE". If CAIRO = FALSE and PERLMAGICK = "FALSE"
+                                    # the script defaults back to a system command to ImageMagick convert command-line utility
 
-use CGI;
-if (PERLMAGICK eq "TRUE") {
+###############################################
+# Location of files and directories on server #
+# Never leave trailing slashes.               #
+# Make all FILE paths absolute.               #
+###############################################
+
+my $datadir = "/home/SNP/uploads/SNPduo"; # Directory data files are uploaded to. Recommend this should NOT be in the html directory to avoid revealing someones data online.
+my $outputdir = "/home/SNP/html/uploads/SNPduo"; # Directory output is transferred to for web display (must be in apache accessible directory)
+my $webpage = "http://10.8.32.151"; # Domain name of the server. When building output links uses $domain/$outputFolder
+my $outputFolder = "uploads/SNPduo"; # This is the directory RELATIVE to the domain root. Used for linking PNGs (see above line)
+my $codedir = "/home/SNP/cgi-bin/SNPduo"; # Directory where R template scripts are stored
+my $compileddir = "/home/SNP/cgi-bin/SNPduo"; # Directoy where compiled C Code is stored, along with the genomic feature (cytoband) files
+my $pathtoR = "/usr/bin/R"; # Path to R executable
+
+################################
+# Set file and directory sizes #
+################################
+use constant FILE_MAX => 1024 * 1024 * 500; #500Mb upload limit
+use constant DIR_MAX => 1024 * 1024 * 5;    # Max 5Gb upload directory. Third number is number GB.
+                                            # Notice there are only 1024 * 1024, instead of three multiplies.
+											# This differs from FILE_MAX since it uses `du -c` output. That
+											# utility reports KB of file space (neglecting the need for 
+											# using 1024*1024*1024*GBsize
+use constant OUTPUT_MAX => 1024 * 1024 * 5; #Max 5Gb of output stored in output directory. Same explain as DIR_MAX
+
+#########################################################################
+#                    WARNING!!!!!!!!!!!!!!                              #
+#     DO NOT CHANGE BELOW THE LINE UNLESS YOU ARE MODIFYING CODE        #
+# If you modify the code yourself you are responsible for debugging it. #
+#########################################################################
+
+use CGI; # Required because the web input is parsed by CGI interface rather than POST
+if (PERLMAGICK eq "TRUE" and CAIRO eq "FALSE") {
 	use Image::Magick; #####PERLMAGICK#####
 }
 
-########################################
-# Declare some constants
-########################################
-use constant FILE_MAX => 1_024 * 1_024 * 200; #200Mb upload limit
-use constant DIR_MAX => 1024 * 1024; # Max 1Gb upload directory. Second number is number of megabytes allowed
-use constant OUTPUT_MAX => 1024 * 1024 * 3; #Max 3Gb of output stored in output directory
- 
-$CGI::POST_MAX = FILE_MAX;
+$CGI::POST_MAX = FILE_MAX; # Set maximum upload size based on $FILE_MAX set above
 
-########################################
-# Set some variables to find where files are.
-# Never leave trailing slashes.
-# Make all file paths absolute.
-########################################
-
-my $datadir = "/home/SNP/uploads/SNPduo"; # Directory data files are uploaded to
-my $outputdir = "/home/SNP/html/uploads/SNPduo"; # Directory output is transferred to for web display
-my $webpage = "http://10.8.32.151"; # Domain name of the server. Assumes output is in $domain/uploads/SNPduo (uploads in document root)
-my $outputFolder = "uploads/SNPduo";
-my $codedir = "/home/SNP/cgi-bin/SNPduo"; # Directory where templates are stored
-my $compileddir = "/home/SNP/cgi-bin/SNPduo"; # Directoy where compiled C Code is stored, along with the genomic feature files
-my $pathtoR = "/usr/bin/R"; # Directory where R executable is located
-
-# WARNING!!!!!!!!!!!!!!
-# DO NOT CHANGE BELOW THE LINE UNLESS YOU ARE MODIFYING CODE
-# If you modify the code yourself you are responsible for debugging it.
-
-#######################################################################################################################################
-#######################################################################################################################################
-my $current_revision = "1.00 Development";
+#########################
+# Set up some constants #
+#########################
+my $current_revision = "v1.3.0-r113";
 my $starttimestamp = timestamp();
+my $pagegenerated = undef;
+my @batchchroms = ();
 
 my $cgi = new CGI;
 my $Rcomparisons = 0;
@@ -101,6 +110,7 @@ my $segmentation = $cgi->param("segmentation") or error($cgi, "Segmentation opti
 
 ########################################
 # Untaint variables
+# Note: Taint mode is important to prevent code injection. HIGHLY recommended to keep on
 ########################################
 
 # Path
@@ -744,6 +754,9 @@ elsif ($platform eq "Custom")
 my $uploadEnd = time();
 my $uploadTime = $uploadEnd - $uploadStart;
 
+# Die if the file uploaded was blank
+error( $cgi, "The uploaded file appears to be empty..." ) if (! -s "${datadir}/${upload}");
+
 ########################################
 # Run R computation
 ########################################
@@ -927,52 +940,57 @@ if ($chrom ne "GenomeByChromosome" && $runmode ne "Tabulate")
 				
 		if ($makepng eq "TRUE" && $makeps eq "TRUE")
 		{
-			if (PERLMAGICK eq "TRUE")
+			if (PERLMAGICK eq "TRUE" && CAIRO eq "FALSE")
 			{
 				PerlMagickConvertPStoPNG($datadir,$upload,$currentComparison,$pswidth,$psheight,"FALSE"); #####PERLMAGICK#####
 			}
-			else
+			elsif (CAIRO eq "FALSE")
 			{
-				CLFORKConvertPStoPNG();#####NOPERLMAGICK#####
-#				system ("convert ${datadir}/${upload}.ps -rotate \"90\" ${datadir}/${upload}.png"); #####NOPERLMAGICK##### # Rotate postscript 90 degrees and convert to a png
+				CLForkConvertPStoPNG($datadir,$upload,$currentComparison,$pswidth,$psheight,"FALSE");#####NOPERLMAGICK#####
 			}
 			
 			if (RENAME eq "TRUE")
 			{
 				rename ("${datadir}/${upload}_${currentComparison}.png", "${outputdir}/${upload}_${currentComparison}.png"); #####RENAME#####
 			}
+			else
+			{
+				system("mv ${datadir}/${upload}_${currentComparison}.png ${outputdir}/${upload}_${currentComparison}.png"); #####NORENAME#####
+			}
 		}
 			
 		########################################
 		# Move files to the proper directories to display on results page
 		########################################
-		
-		##
-		# Move output files to webaccessible directory
-		##
-#		if ($makeps eq "TRUE" && $makepng eq "TRUE")
-#		{
-#			system("mv ${datadir}/${upload}.ps $outputdir/${upload}.ps;mv ${datadir}/${upload}.png $outputdir/${upload}.png;mv ${datadir}/${upload}.summary.txt $outputdir/$upload.summary.txt");
-#		} #####NORENAME#####
-#		if ($makeps eq "TRUE" && $makepng eq"FALSE")
-#		{
-#			system("mv ${datadir}/${upload}.ps $outputdir/${upload}.ps;mv ${datadir}/${upload}.summary.txt $outputdir/$upload.summary.txt");
-#		} #####NORENAME#####
-#		if ($makeps eq "FALSE")
-#		{
-#			system("mv ${datadir}/${upload}.summary.txt $outputdir/$upload.summary.txt");
-#		} #####NORENAME#####
-	 	if ($makeps eq "TRUE")
-	 	{
-		 	rename("${datadir}/${upload}_${currentComparison}.ps","${outputdir}/${upload}_${currentComparison}.ps");
-		} #####RENAME#####
-		
-		if (RENAME eq "TRUE")
+		# Using mv command-line directive
+		if (RENAME ne "TRUE")
 		{
-			rename ("${datadir}/${upload}_${currentComparison}.summary.txt", "${outputdir}/${upload}_${currentComparison}.summary.txt"); #####RENAME#####
-			
+# 			if ($makeps eq "TRUE" && $makepng eq "TRUE")
+# 			{
+# 				system("mv ${datadir}/${upload}.ps $outputdir/${upload}.ps; mv ${datadir}/${upload}.png $outputdir/${upload}.png; mv ${datadir}/${upload}.summary.txt $outputdir/$upload.summary.txt"); #####NORENAME#####
+# 			}
+			 
+			if ($makeps eq "TRUE")
+			{
+				system("mv ${datadir}/${upload}_${currentComparison}.ps $outputdir/${upload}_${currentComparison}.ps; mv ${datadir}/${upload}_${currentComparison}.summary.txt $outputdir/${upload}_${currentComparison}.summary.txt");  #####NORENAME#####
+			}
+			else
+			{
+				system("mv ${datadir}/${upload}_${currentComparison}.summary.txt $outputdir/${upload}_${currentComparison}.summary.txt");  #####NORENAME#####
+			}
 		}
 		
+		# Using rename
+	 	if (RENAME eq "TRUE")
+		{
+			if ($makeps eq "TRUE")
+			{
+				rename("${datadir}/${upload}_${currentComparison}.ps","${outputdir}/${upload}_${currentComparison}.ps");
+			}
+			rename ("${datadir}/${upload}_${currentComparison}.summary.txt", "${outputdir}/${upload}_${currentComparison}.summary.txt"); #####RENAME#####
+		}
+		
+		# Make zip file
 	 	if ($makeps eq "TRUE" && $makepng eq "TRUE")
 	 	{
 			system ("cd $outputdir; zip -q ${upload}_${currentComparison}.zip ${upload}_${currentComparison}.ps ${upload}_${currentComparison}.png ${upload}.summary_${currentComparison}.txt");
@@ -1038,10 +1056,10 @@ if ($chrom ne "GenomeByChromosome" && $runmode ne "Tabulate")
 	}
 	else
 	{
-		system("mv ${datadir}/${upload}.bed $outputdir/$upload.bed");
+		system("mv ${datadir}/${upload}.bed $outputdir/${upload}.bed");
 	}
 	
-	my $pagegenerated = timestamp();
+	$pagegenerated = timestamp();
 	
 	print $cgi->header();
 	
@@ -1148,7 +1166,7 @@ elsif ($chrom eq "GenomeByChromosome" && $runmode ne "Tabulate")
 	########################################
 	open BATCHLIST, "${datadir}/${upload}_1.chromlist" or error ($cgi,  "Can't open list of chromosomes processed:$!"); 
 	
-	our @batchchroms = <BATCHLIST>;
+	@batchchroms = <BATCHLIST>;
 	chomp (@batchchroms);
 	
 	close BATCHLIST;
@@ -1214,18 +1232,28 @@ elsif ($chrom eq "GenomeByChromosome" && $runmode ne "Tabulate")
 				
 				$tmpchrom = $upload ."chr" . $tmpchrom;
 				
-				PerlMagickConvertPStoPNG ($datadir,$tmpchrom,$currentComparison,$pswidth,$psheight,"TRUE"); #####PERLMAGICK#####
-#				CLForkConvertPStoPNG ( ... ); #####NOPERLMAGICK#####
-#					system("convert $datadir/$tmpchrom.ps -rotate \"90\" $datadir/$tmpchrom.png; convert -resize 124x96 $datadir/$tmpchrom.png $datadir/${tmpchrom}thumb.png"); #####NOPERLMAGICK#####
+				if (PERLMAGICK eq "TRUE" && CAIRO eq "FALSE")
+				{
+					PerlMagickConvertPStoPNG ($datadir,$tmpchrom,$currentComparison,$pswidth,$psheight,"TRUE"); #####PERLMAGICK#####
+				}
+				elsif (CAIRO eq "FALSE")
+				{
+					CLForkConvertPStoPNG ($datadir,$tmpchrom,$currentComparison,$pswidth,$psheight,"TRUE"); #####NOPERLMAGICK#####
+				}
 				
 				##
 				# Move output files to webaccessible directory
 				##
-#				system("mv $datadir/$tmpchrom.ps $outputdir/$tmpchrom.ps; mv $datadir/$tmpchrom.png $outputdir/$tmpchrom.png; mv $datadir/${tmpchrom}thumb.png $outputdir/${tmpchrom}thumb.png");######NORENAME#####
-				
-		 		rename ("${datadir}/${tmpchrom}_${currentComparison}.ps","${outputdir}/${tmpchrom}_${currentComparison}.ps"); #####RENAME#####
-		 		rename ("${datadir}/${tmpchrom}_${currentComparison}.png","${outputdir}/${tmpchrom}_${currentComparison}.png"); #####RENAME#####
-		 		rename ("${datadir}/${tmpchrom}thumb_${currentComparison}.png","${outputdir}/${tmpchrom}thumb_${currentComparison}.png"); #####RENAME#####
+				if (RENAME eq "TRUE")
+				{
+					rename ("${datadir}/${tmpchrom}_${currentComparison}.ps","${outputdir}/${tmpchrom}_${currentComparison}.ps"); #####RENAME#####
+					rename ("${datadir}/${tmpchrom}_${currentComparison}.png","${outputdir}/${tmpchrom}_${currentComparison}.png"); #####RENAME#####
+					rename ("${datadir}/${tmpchrom}thumb_${currentComparison}.png","${outputdir}/${tmpchrom}thumb_${currentComparison}.png"); #####RENAME#####
+				}
+				else
+				{
+					system("mv ${datadir}/${tmpchrom}_${currentComparison}.ps ${outputdir}/${tmpchrom}_${currentComparison}.ps; mv ${datadir}/${tmpchrom}_${currentComparison}.png ${outputdir}/${tmpchrom}_${currentComparison}.png; mv ${datadir}/${tmpchrom}thumb_${currentComparison}.png ${outputdir}/${tmpchrom}thumb_${currentComparison}.png");######NORENAME#####
+				}
 			}
 		} 
 		
@@ -1234,7 +1262,14 @@ elsif ($chrom eq "GenomeByChromosome" && $runmode ne "Tabulate")
 		# Add to the zip file
 		########################################
 #		system ("mv ${datadir}/${upload}.summary.txt $outputdir/$upload.summary.txt; cd $outputdir; zip -q ${upload}.zip ${upload}.summary.txt");######NORENAME#####
-	 	rename ("${datadir}/${upload}_${currentComparison}.summary.txt","${outputdir}/${upload}_${currentComparison}.summary.txt"); #####RENAME#####
+		if (RENAME eq "TRUE")
+		{
+			rename ("${datadir}/${upload}_${currentComparison}.summary.txt","${outputdir}/${upload}_${currentComparison}.summary.txt"); #####RENAME#####
+		}
+		else
+		{
+			system("mv ${datadir}/${upload}_${currentComparison}.summary.txt ${outputdir}/${upload}_${currentComparison}.summary.txt");
+		}
 	 	
 	 	if ($makepng eq "TRUE" && $makeps eq "TRUE")
 	 	{
@@ -1317,7 +1352,7 @@ elsif ($chrom eq "GenomeByChromosome" && $runmode ne "Tabulate")
 	########################################
 	# Output for GenomeByChromosome
 	########################################
-	my $pagegenerated = timestamp();
+	$pagegenerated = timestamp();
 	
 	print $cgi->header();
 
@@ -1466,7 +1501,7 @@ elsif ($runmode eq "Tabulate")
 	########################################
 	open BATCHLIST, "${datadir}/${upload}.chromlist" or error ($cgi,  "Can't open list of chromosomes processed:$!"); 
 	
-	my @batchchroms = <BATCHLIST>;
+	@batchchroms = <BATCHLIST>;
 	chomp (@batchchroms);
 	
 	close BATCHLIST;
@@ -1514,7 +1549,7 @@ elsif ($runmode eq "Tabulate")
 	########################################
 	# Output for GenomeByChromosome
 	########################################
-	my $pagegenerated = timestamp();
+	$pagegenerated = timestamp();
 	
 	########################################
 	# HTML header and initial text
@@ -1682,10 +1717,10 @@ sub error
 	print $out->header("text/html");
 	print ("<html>\n<head>\n<title>Error Page\n</title>\n\n<style type=\"text/css\">\ntable {margin-left: auto; margin-right: auto}\ntr {text-align: center; vertical-align: middle}\nth {text-align: center}\nbody {font-family: verdana, arial, helvetica, sans-serif}\n</style>\n</head>\n<body>\n");
 	
-	print ("<p>An error has occurred during file processing\n<br>Error message: $message\n</p>\n");
+	print ("<p>An error has occurred during file processing\n<br>Error message: ${message}\n</p>\n");
 	print ("</body>\n</html>");
 
-	exit 0;
+	exit 1;
 }
 
 ########################################
@@ -1745,6 +1780,14 @@ sub WriteRTemplate
 		s/PS_HOLDER/$Makeps/g;
 		s/MODE_HOLDER/$RunMode/g;
 		s/BED_HOLDER/$BEDMode/g;
+		if (CAIRO eq "TRUE")
+		{
+			s/PNG_HOLDER/TRUE/g;
+		}
+		else
+		{
+			s/PNG_HOLDER/FALSE/g;
+		}
 		
 		print R_CODE;
 	}
@@ -1764,24 +1807,46 @@ sub PerlMagickConvertPStoPNG
 	
 	my $imageCMD = Image::Magick->new;
 	my $image = $imageCMD->Read("${dataDir}/${uploadName}_${currentName}.ps");
-	   $image = $imageCMD->Rotate(degrees=>90);
+	$image = $imageCMD->Rotate(degrees=>90);
 	my $pngwidth = int($psWidth*72);
 	my $pngheight = int($psHeight*72);
-	   $image = $imageCMD->Resize(geometry=>"pngwidth x $pngheight", filter=>"Blackman");
-#	   $image = $imageCMD->Sharpen(2);
-	   $image = $imageCMD->Write("${dataDir}/${uploadName}_${currentName}.png");
+	$image = $imageCMD->Resize(geometry=>"${pngwidth}x${pngheight}");
+#	$image = $imageCMD->Resize(geometry=>"$pngwidth x $pngheight", filter=>"Blackman"); # Doesn't work for genome for some reason
+#	$image = $imageCMD->Sharpen(2);
+	$image = $imageCMD->Write("${dataDir}/${uploadName}_${currentName}.png");
+	
 	if( $Thumbnail eq "TRUE" )
 	{
-		$image = $imageCMD->Resize(geometry=>"124 x 96");
+		$image = $imageCMD->Resize(geometry=>"124x96");
 		$image = $imageCMD->Write("${dataDir}/${uploadName}thumb_${currentName}.png");
+	}
+}
+
+########################################
+# Subroutine for creating images using #
+# the command-line version of          #
+# Image Magick convert                 #
+########################################
+sub CLForkConvertPStoPNG
+{
+	my ($dataDir,$uploadName,$currentName,$psWidth,$psHeight,$Thumbnail) = @_;
+	
+	my $pngwidth = int($psWidth*72);
+	my $pngheight = int($psHeight*72);
+	
+	system( "convert -rotate \"90\" +antialias -resize ${pngwidth}x${pngheight} ${dataDir}/${uploadName}_${currentName}.ps ${dataDir}/${uploadName}_${currentName}.png" );
+	
+	if ( $Thumbnail eq "TRUE" )
+	{
+		system( "convert -rotate \"90\" +antialias -resize 124x96 ${dataDir}/${uploadName}_${currentName}.ps ${dataDir}/${uploadName}thumb_${currentName}.png" );
 	}
 }
 
 ########################################
 # Subroutine for checking directory sizes
 ########################################
-
-sub DirectoryCheck {
+sub DirectoryCheck
+{
 	my ($uploadDir, $outputDir) = @_;
 	
 	my $uploadDirSize = `du -c $uploadDir | grep total`;
@@ -1798,141 +1863,98 @@ sub DirectoryCheck {
 ########################################
 # Subroutine for cleaning full directories
 ########################################
-
 sub DirectoryClean
 {
-	my $i = 0;
 	my ($uploadDirectory, $outputDirectory) = @_;
 	my $round = 1;
 	my $dirClean = 0;
-
+	
+	opendir (DIR, $uploadDirectory);
+	my @uploadFiles = readdir(DIR);
+	shift (@uploadFiles); # remove "."
+	shift (@uploadFiles); # remove ".."
+	closedir (DIR);
+	
+	foreach $file (@uploadFiles)
+	{ 
+		$file =~ s/^([\w\s\-\_\.]+)$/$1/ || die "Can't match file $file for cleaning: $!\n";
+		$file = $uploadDirectory . "/" . $file;
+	}
+	
+	opendir (DIR, $outputDirectory);
+	my @outputFiles = readdir(DIR);
+	shift (@outputFiles); # remove "."
+	shift (@outputFiles); # remove ".."
+	closedir (DIR);
+	
+	foreach $file (@outputFiles)
+	{
+		$file =~ s/^([\w\s\-\_\.]+)$/$1/ || die "Can't match file $file for cleaning: $!\n";
+		$file = $outputDirectory . "/" . $file;
+	}
+	
+	# Combine arrays
+	my @allFiles = (@uploadFiles, @outputFiles);
+		
 	# Loop through cleaning files, multiple times if necessary
 	until ($dirClean == 1 || $round > 7)
 	{
-		my @age = 0;
-		my @killArray = 0;
-		
-		# Get both directory contents
-		opendir (DIR, $uploadDirectory);
-		my @uploadFiles = readdir(DIR);
-		shift (@uploadFiles);
-		shift (@uploadFiles);
-		closedir (DIR);
-		opendir (DIR, $outputDirectory);
-		my @outputFiles = readdir(DIR);
-		shift (@outputFiles);
-		shift (@outputFiles);
-		closedir (DIR);
-		
-		# Add the directory onto the file to get stats
-		foreach $file (@uploadFiles)
-		{ 
-			$file =~ s/^([\w\s\-\_\.]*)$/$1/ || die "Can't match file $file for cleaning: $!\n";
-			$file = $uploadDirectory . "/" . $file;
-		}
-		foreach $file (@outputFiles)
-		{
-			$file =~ s/^([\w\s\-\_\.]*)$/$1/ || die "Can't match file $file for cleaning: $!\n";
-			$file = $outputDirectory . "/" . $file;
-		}
-		
-		# Combine arrays
-		my @allFiles = (@uploadFiles, @outputFiles);
-		
 		# Get each file size
 		foreach $file (@allFiles)
 		{
-			my @stat = stat($file);
-			push (@age, $stat[9]);
-		}
-		
-		# Kill the starting zero if there are any files to process
-		if (scalar(@age) > 1)
-		{
-			shift(@age);
-		}
-		
-		my $currTime = time;
-		
-		# Now select files to delete, based on the severity of file overload
-		for ($i = 0; $i < scalar(@age); ++$i)
-		{
-			my $currAge = $age[$i];
+			next if ($file eq " ");
 			
-			if ($round == 1)
+			my $age = -M $file || error($cgi, "In attempting to clean upload directory could not stat $file");
+			
+			if ($round == 1 && $age >= 7)
 			{
-				# Delete older than 7 days
-				if (($currTime - $currAge) > 604800)
-				{
-					push(@killArray, $allFiles[$i]);
-				}
-			} 
-			elsif ($round == 2)
-			{
-				# Delete older than 3 days
-				if (($currTime - $currAge) > 259200)
-				{
-					push(@killArray, $allFiles[$i]);
-				}
+				unlink( $file );
+				$file = " ";
 			}
-			elsif ($round == 3)
+			
+			elsif ($round == 2 && $age >= 3)
 			{
-				# Delete files older than 1 day
-				if (($currTime - $currAge) > 86400)
-				{
-					push(@killArray, $allFiles[$i]);
-				}
+				unlink( $file );
+				$file = " ";
 			}
-			elsif ($round == 4)
+			
+			elsif ($round == 3 && $age >= 1)
 			{
-				# Delete files older than 12 hours
-				if (($currTime - $currAge) > 43200)
-				{
-					push(@killArray, $allFiles[$i]);
-				}
+				unlink( $file );
+				$file = " ";
 			}
-			elsif ($round == 5)
+			
+			elsif ($round == 4 && $age >= 0.50)
 			{
-				# Delete files older than 6 hours
-				if (($currTime - $currAge) > 21600)
-				{
-					push(@killArray, $allFiles[$i]);
-				}
+				unlink( $file );
+				$file = " ";
 			}
-			elsif ($round == 6)
+			
+			elsif ($round == 5 && $age >= 0.25)
 			{
-				# Delete files older than 1 hour
-				if (($currTime - $currAge) > 3600)
-				{
-					push(@killArray, $allFiles[$i]);
-				}
+				unlink( $file );
+				$file = " ";
 			}
+			
+			elsif ($round == 6 && $age >= 0.04)
+			{
+				unlink( $file );
+				$file = " ";
+			}
+			
 			else
 			{
-				# Kill everything in the two directories as a last resort
-				push (@killArray, $allFiles[$i]);
-			}
-		}		
-		
-		if (scalar(@killArray) > 1)
-		{
-			shift (@killArray);
-			
-			foreach $file (@killArray)
-			{
-				chomp ($file);
-				if ($file =~ /^(.*)$/)
-				{
-					$file = $1;
-					unlink ("$file");
-				}
+				unlink( $file );
+				$file = " ";
 			}
 		}
+		
 				
 		my $uploadDirSize = `du -c $uploadDirectory | grep total`;
-		$uploadDirSize =~ s/^(\d*)\s*.*$/$1/e or die "Can't understand upload directory size $uploadDirSize: $!\n";
+		$uploadDirSize =~ s/^\s*(\d+)\s*.*$/$1/e or die "Can't understand upload directory size $uploadDirSize: $!\n";
+		
 		my $outputDirSize = `du -c $outputDirectory | grep total`;
-		$outputDirSize =~ s/^(\d*)\s*.*$/$1/e or die "Can't understand output directory size $outputDirSize: $!\n";
+		$outputDirSize =~ s/^\s*(\d+)\s*.*$/$1/e or die "Can't understand output directory size $outputDirSize: $!\n";
 		
 		if ($uploadDirSize < DIR_MAX && $outputDirSize < DIR_MAX)
 		{

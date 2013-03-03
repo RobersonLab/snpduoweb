@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<?php include("./copyrightstatement.php"); ?>
+
+<html>
+
+<head>
+<title>SNPduoWeb at the Pevsnerlab -- Introduction</title>
+<link rel="stylesheet" type="text/css" href="SNPduo.css">
+<meta name="author" content="Elisha Roberson">
+<meta name="description" content="An introduction to the thinking and schema behind the implementation of the SNPduoWeb tool">
+<meta name="keywords" content="SNP,SNPduo,introduction,explanation,schema">
+</head>
+
+<body>
+
+<?php include("./header.php"); ?>
+
+
+<table width="100%" border="0" cellpadding="0" cellspacing="0">
+<tr class="rowcommon cell2">
+<td>
+
+<blockquote>
+<table border="0" cellpadding="6" cellspacing="3">
+<tr class="rowcommon">
+<td class="cell1">Introduction</td>
+<td class="cell2">An introduction into the function of SNPduo</td>
+</tr>
+</table>
+</blockquote>
+
+</td>
+</tr>
+</table>
+
+<hr>
+
+<p>
+<strong>Identity by State</strong>
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SNPduoWeb is a visualization tool built upon the principle of identity by state (IBS). Identity by state is a biological comparison of genotypes between two individuals which states how many identical alleles their genotypes share. The possible combinations are:
+</p>
+
+<ol>
+<li>Sharing two identical alleles (IBS 2)</li>
+<li>Sharing one identical allele (IBS 1)</li>
+<li>Sharing no identical alleles (IBS 0)</li>
+<li>Not enough information (when at least one individual has no calls)</li>
+</ol>
+
+<p>
+<img src="images/schema.jpg" width="346" height="403" alt="SNPduoWeb Schema">
+<br>
+<br>
+<strong>SNPduoWeb Plot</strong>
+
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SNPduoWeb takes SNP data in any of the listed formats, performs a point by point comparison of genotypes between two individuals, and reports back the number of alleles identical by state for each SNP. This information is used to generate a plot to visually display the information. 
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The resulting plot shows the physical position along the X-axis (abscissa) and the identity by state on the Y-axis (ordinate) in the first panel. The number of counts for each IBS type are displayed along the right side of the Y-axis.
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The second panel displays the genotype data for individual one as a function of physical map distance. "No Call" SNPs are displayed on this graph, along with counts for each genotype to the right of the Y-axis.
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The third panel displays the genotype data for individual two in exactly the same fashion as described for individual one.
+
+<br><br>
+<strong>Utility</strong>
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The more closely related two individuals are the more alleles they will share that are identical by state. That is to say that the closer the relationship the greater the number of alleles shared completely (IBS 2) and partially (IBS 1), while the number of alleles not shared at all (IBS 0) decreases. Therefore SNPduoWeb allows for the display of "relatedness". The uses and features SNPduoWeb include:
+</p>
+
+<ol>
+	<li>Easy to use web interface</li>
+	<li>Code available for local Linux installation
+		<ol class="loweralpha">
+		<li>A visual display of the "relatedness" between two individuals</li>
+		<li>A visual display of genotype
+			<ul>
+				<li>Output includes a publication quality postscript</li>
+			</ul>
+		</li>
+		</ol>
+	</li>
+	<li>Counts of the number of alleles identical by state</li>
+	<li>Counts of each individual genotype</li>
+	<li>Summary tables which include the chromosome, position, genotype for both individuals, and the IBS for each SNP</li>
+	<li>Bed file for display of IBS blocks on the UCSC Genome Browswer</li>
+</ol>
+
+<p>
+<strong>SNPduo++</strong>
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SNPduo++ provides a portable C++ command-line program for the analysis of large datasets. Using input files in <a href="http://pngu.mgh.harvard.edu/~purcell/plink/">PLINK</a> compatible format, data can be analyzed for mean and standard deviation of IBS in populations. This facilitates:
+</p>
+<ol>
+	<li>Exploration of population structure and stratification</li>
+	<li>Identify duplicate samples</li>
+	<li>Directly identify 1st degree relatives labeled as unrelated</li>
+	<li>Provide data for visualization to find unexpected 2nd and 3rd degree relatives in the data</li>
+</ol>
+
+<?php include("./footer.php"); ?>
+
+<p>This page last updated on <?php echo date("F d, Y", getlastmod() ); ?> </p>
+
+</body>
+</html>

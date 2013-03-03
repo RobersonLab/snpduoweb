@@ -3,10 +3,10 @@
 #	AffyCNAT4Template.R
 #	Author: Eli Roberson
 #	Created: September 20, 2007 
-#	Last Edit: September 19, 2008 - ER
+#	Last Edit: March 09, 2012 - ER
 #
 #############################
-#  Copyright (c)  2007-2008 Elisha Roberson and Jonathan Pevsner.
+#  Copyright (c)  2007-2012 Elisha Roberson and Jonathan Pevsner.
 #                 All Rights Reserved.
 #
 #  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS "AS IS" AND ANY 
@@ -38,6 +38,11 @@ SEP = SEP_HOLDER
 
 input = read.delim(upload, colClasses="character", comment.char="", skip=1, nrow=ROW_HOLDER, sep=SEP)
 
+if (dim(input)[2] == 1) { stop( paste("One column found in uploaded data. Check your file format to be sure this is correct") ) }
+
+# Sanitize input to throw away unusual probes
+input = subset(input, Chromosome %in% c(1:22, "X", "Y", "M", "MT", "Mito", "MITO"))
+
 chrom = "CHR_HOLDER"
 
 chromList = CHR_LIST
@@ -57,6 +62,8 @@ comparisonVector = COMPARISON_VECTOR
 cytoband = LoadFeatures(compiled, genomebuild)
 
 makepostscript = PS_HOLDER
+
+makePNG = PNG_HOLDER
 
 MODE = "MODE_HOLDER"
 
@@ -90,13 +97,13 @@ if (MODE != "Tabulate")
 	
 			if(chrom == "Genome")
 			{
-				genome.plot(input,ind1,ind2,savename=upload,pswidth, psheight, comparison=comparisonVector[comparisonVectorCounter], doPostscript=makepostscript, makeBED = BED)
+				genome.plot(input,ind1,ind2,savename=upload,pswidth, psheight, comparison=comparisonVector[comparisonVectorCounter], doPostscript=makepostscript, makeBED = BED, doPNG=makePNG, chr.offset=LoadOffsets(compiled,genomebuild) )
 			} else if (chrom == "GenomeByChromosome")
 			{
-				genomebychromosome(input,ind1, ind2, savename=upload, pswidth, psheight, comparison=comparisonVector[comparisonVectorCounter], doPostscript=makepostscript,chromlist=chromList, makeBED = BED)
+				genomebychromosome(input,ind1, ind2, savename=upload, pswidth, psheight, comparison=comparisonVector[comparisonVectorCounter], doPostscript=makepostscript,chromlist=chromList, makeBED = BED, doPNG=makePNG)
 			} else
 			{
-				SNPduo(input,chrom, ind1, ind2, savename=upload, pswidth, psheight, comparison=comparisonVector[comparisonVectorCounter], doPostscript=makepostscript, makeBED = BED)
+				SNPduo(input,chrom, ind1, ind2, savename=upload, pswidth, psheight, comparison=comparisonVector[comparisonVectorCounter], doPostscript=makepostscript, makeBED = BED, doPNG=makePNG)
 			}
 			
 			comparisonVectorCounter = comparisonVectorCounter + 1

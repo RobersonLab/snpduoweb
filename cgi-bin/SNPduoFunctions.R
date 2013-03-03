@@ -1,41 +1,41 @@
-########################################
-#
-#	SNPduoFunctions.R
-#	Author: Eli Roberson
-#	Created: April 20, 2007
-#	Last Edit: November 06, 2008 - ER
-#
-########################################
-#  Copyright (c)  2007-2008 Elisha Roberson and Jonathan Pevsner.
-#                 All Rights Reserved.
-#
-#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS "AS IS" AND ANY 
-#  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-#  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR 
-#  PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNERS BE
-#  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-#  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-#  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-#  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-#  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-#  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-#  POSSIBILITY OF SUCH DAMAGE. THIS SOFTWARE IS FREE FOR PERSONAL OR ACADEMIC
-#  USE. THE SOFTWARE MAY NOT BE USED COMMERCIALLY WITHOUT THE EXPRESS, WRITTEN
-#  PERMISSION OF THE COPYRIGHT HOLDERS. ALL ACTIONS OR PROCEEDINGS RELATED TO 
-#  THIS SOFTWARE SHALL BE TRIED EXCLUSIVELY IN THE STATE AND FEDERAL COURTS 
-#  LOCATED IN THE COUNTY OF BALTIMORE CITY, MARYLAND. USE OF THIS SOFTWARE
-#  IMPLIES ACCEPTANCE OF THIS CONTRACT.
-#############################
+################################################################################
+#  SNPduoFunctions.R                                                           #
+#  Author: Eli Roberson                                                        #
+#  Created: April 20, 2007                                                     #
+#  Last Edit: March 09, 2012 - ER                                              #
+#                                                                              #
+#  Copyright (c)  2007-2012 Elisha Roberson and Jonathan Pevsner.              #
+#                 All Rights Reserved.                                         #
+#                                                                              #
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS "AS IS" AND ANY          #
+#  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE           #
+#  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR          #
+#  PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNERS BE           #
+#  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR         #
+#  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF        #
+#  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS    #
+#  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN     #
+#  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)     #
+#  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE  #
+#  POSSIBILITY OF SUCH DAMAGE. THIS SOFTWARE IS FREE FOR PERSONAL OR ACADEMIC  #
+#  USE. THE SOFTWARE MAY NOT BE USED COMMERCIALLY WITHOUT THE EXPRESS, WRITTEN #
+#  PERMISSION OF THE COPYRIGHT HOLDERS. ALL ACTIONS OR PROCEEDINGS RELATED TO  #
+#  THIS SOFTWARE SHALL BE TRIED EXCLUSIVELY IN THE STATE AND FEDERAL COURTS    #
+#  LOCATED IN THE COUNTY OF BALTIMORE CITY, MARYLAND. USE OF THIS SOFTWARE     #
+#  IMPLIES ACCEPTANCE OF THIS CONTRACT.                                        #
+################################################################################
 
-########################################
-#  SNPduo
-#
-#  Function to plot a single chromosome
-#  Used for single chromosome comparisons
-#  and for Genome By Chromosome comparisons
-########################################
-SNPduo = function(x, y, ind1, ind2, savename, pagewidth, pageheight, bychromosome = FALSE, cexScale = 0.20, comparison = "None", pchValue=20,doPostscript = TRUE, makeBED = TRUE)
+#############################################
+#  SNPduo                                   #
+#                                           #
+#  Function to plot a single chromosome     #
+#  Used for single chromosome comparisons   #
+#  and for Genome By Chromosome comparisons #
+#############################################
+SNPduo = function(x, y, ind1, ind2, savename, pagewidth, pageheight, bychromosome = FALSE, cexScale = 0.20, comparison = "None", pchValue=20,doPostscript = TRUE, makeBED = TRUE, doPNG=FALSE, DPI=72, THUMBNAIL=FALSE)
 {	
+	if (!doPNG & THUMBNAIL) { THUMBNAIL = FALSE } # We only allow thumbnail generation if doPNG is set
+	
 	########################################
 	# Find the columns containing chromosome and position by grep
 	########################################
@@ -81,7 +81,7 @@ SNPduo = function(x, y, ind1, ind2, savename, pagewidth, pageheight, bychromosom
 	########################################
 	# For numeric chromosomes make sure they are in numeric form by running chrom_convert function
 	########################################
-	if (y != "X" && y != "Y" && y != "M" && y != "XY") {y = chrom_convert(y)}
+	if (y != "X" && y != "Y" && y != "M" && y != "MT" && y != "Mito" && y != "MITO" && y != "XY") {y = chrom_convert(y)}
 	
 	########################################
 	# Pull the physical position data into a vector
@@ -149,7 +149,7 @@ SNPduo = function(x, y, ind1, ind2, savename, pagewidth, pageheight, bychromosom
 	ind2.BB = unlist(Cdata[11])
 	ind2.NC = unlist(Cdata[12])
 	
-	if (doPostscript == TRUE)
+	if (doPostscript == TRUE || doPNG == TRUE || THUMBNAIL == TRUE)
 	{
 		########################################
 		# Tick Marks
@@ -165,6 +165,7 @@ SNPduo = function(x, y, ind1, ind2, savename, pagewidth, pageheight, bychromosom
 		
 		########################################
 		# Use function find ticks to find tick mark position, number, and the proper x-axis label for the tick scale
+		# Also find the jittered placement of IBS and genotype, for consistency between PS and PNG
 		########################################
 		ticks = findticks(maxpos)
 		ticklabel = unlist(ticks[2])
@@ -179,61 +180,95 @@ SNPduo = function(x, y, ind1, ind2, savename, pagewidth, pageheight, bychromosom
 			max.tmp = max.ticks
 		}
 		
-		########################################
-		# Postscript
-		# Set paper size bases on page input. Name the file appropriately for single chromosome versus genome by chromosome
-		########################################
-		if (bychromosome)
+		ibs.jittered = jitter(ibsVector, amount = 0.20) + 13
+		gen1.jittered = jitter(gen1, amount = 0.20) + 8
+		gen2.jittered = jitter(gen2, amount = 0.20) + 3
+		
+		# A new trick to get the PNG and postscript to print the same thing if asked
+		while (doPostscript == TRUE || doPNG == TRUE || THUMBNAIL == TRUE)
 		{
-			postscript(file=paste(savename,"chr", y, "_", comparison, ".ps", sep=""), paper="special", width=pagewidth, height=pageheight, horizontal=TRUE)
-		} else
-		{
-			postscript(file=paste(savename,"_", comparison,".ps", sep=""), paper="special", width=pagewidth, height=pageheight, horizontal=TRUE)
+			########################################
+			# Postscript
+			# Set paper size bases on page input. Name the file appropriately for single chromosome versus genome by chromosome
+			########################################
+			if (bychromosome)
+			{
+				if (doPostscript)
+				{
+					postscript(file=paste(savename,"chr", y, "_", comparison, ".ps", sep=""), paper="special", width=pagewidth, height=pageheight, horizontal=TRUE)
+				} else if (doPNG)
+				{
+					png(filename=paste(savename,"chr", y, "_", comparison, ".png", sep=""), width=round(pagewidth * DPI,0), height=round(pageheight*DPI,0), units="px", bg="white", type="cairo", antialias="default", res=DPI)
+				} else if (THUMBNAIL)
+				{
+					png(filename=paste(savename,"chr", y, "thumb_", comparison, ".png", sep=""), width=124, height=96, units="px", bg="white", type="cairo", antialias="default", res=DPI, pointsize=1)
+				}
+			} else
+			{
+				if (doPostscript)
+				{
+					postscript(file=paste(savename,"_", comparison,".ps", sep=""), paper="special", width=pagewidth, height=pageheight, horizontal=TRUE)
+				} else if (doPNG)
+				{
+					png(filename=paste(savename,"_", comparison,".png", sep=""), width=round(pagewidth * DPI,0), height=round(pageheight*DPI,0), units="px", bg="white", type="cairo", antialias="default", res=DPI)
+				}
+			}
+			
+			plot.min = 0
+			plot.max = 16
+			par("mar" = c(5, 4, 4, 5) + 0.1)
+			plot.new()
+			plot.window(xlim = c(1, max.tmp), ylim = c(plot.min, plot.max))
+			title(paste("Chromosome ", y, " SNPduo Output\n", printInd1, " - ", printInd2, "\nAverage IBS: ", avg.ibs,sep=""))
+			title(xlab = paste("Physical Position", posprefix))
+			
+			points(physPos, ibs.jittered, cex = cexScale, pch = pchValue)
+			points(physPos, gen1.jittered, cex = cexScale, pch = pchValue)
+			points(physPos, gen2.jittered, cex = cexScale, pch = pchValue)
+			drawCytobands(y, cytoband, miny = 0, maxy = 2)
+			axis(1, at = ticks, labels = as.character(ticklabel))
+			
+			ibslab = c(0,1,2)
+			genlab = c(0,1,2,3)
+			axis(2, at = c((genlab + 3)), labels = c("NC", "AA", "AB", "BB") , las = 1)
+			axis(2, at = c((genlab + 8)), labels = c("NC", "AA", "AB", "BB") , las = 1)
+			axis(2, at = c((ibslab + 13)), labels = c("0", "1", "2") , las = 1)
+			
+			axis(4, at = c((genlab + 3)), c(paste( format(ind2.NC,big.mark=",")), paste( format(ind2.AA,big.mark=",")), paste( format(ind2.AB,big.mark=",")), paste( format(ind2.BB,big.mark=","))), las = 1)
+			axis(4, at = c((genlab + 8)), c(paste( format(ind1.NC,big.mark=",")), paste( format(ind1.AA,big.mark=",")), paste( format(ind1.AB,big.mark=",")), paste( format(ind1.BB,big.mark=","))), las = 1)
+			axis(4, at = c((ibslab + 13)), c(paste( format(ibs0,big.mark=",")), paste( format(ibs1,big.mark=",")), paste( format(ibs2,big.mark=","))), las = 1)
+			
+			########################################
+			# Side labels
+			########################################
+			mtext("Genotype", line = 3,side = 2, at = 4.5, cex = 1.15)
+			mtext("Genotype", line = 3,side = 2, at = 9.5, cex = 1.15)
+			mtext("Identity by State", line = 3, side = 2, at = 14, cex = 1.15)
+			
+			########################################
+			# Inside labels
+			########################################
+			text(x = max.tmp / 2, y = 12, paste(printInd1), cex = 1.05)
+			text(x = max.tmp / 2, y = 7, paste(printInd2), cex = 1.05)
+			
+			########################################
+			# Box it
+			########################################
+			rect(0, 2.4, max.tmp, 15.6)
+			
+			dev.off()
+			
+			if (doPostscript)
+			{
+				doPostscript = FALSE
+			} else if (doPNG)
+			{
+				doPNG = FALSE
+			} else if (THUMBNAIL)
+			{
+				THUMBNAIL = FALSE
+			}
 		}
-		
-		plot.min = 0
-		plot.max = 16
-		par("mar" = c(5, 4, 4, 5) + 0.1)
-		plot.new()
-		plot.window(xlim = c(1, max.tmp), ylim = c(plot.min, plot.max))
-	 	title(paste("Chromosome ", y, " SNPduo Output\n", printInd1, " - ", printInd2, "\nAverage IBS: ", avg.ibs,sep=""))
-	title(xlab = paste("Physical Position", posprefix))
-	 	
-	 	points(physPos, (jitter(ibsVector, amount = 0.20) + 13), cex = cexScale, pch = pchValue)
-	 	points(physPos, (jitter(gen1, amount = 0.20) + 8), cex = cexScale, pch = pchValue)
-	 	points(physPos, (jitter(gen2, amount = 0.20) + 3), cex = cexScale, pch = pchValue)
-	 	drawCytobands(y, cytoband, miny = 0, maxy = 2)
-		axis(1, at = ticks, labels = as.character(ticklabel))
-		
-		ibslab = c(0,1,2)
-		genlab = c(0,1,2,3)
-		axis(2, at = c((genlab + 3)), labels = c("NC", "AA", "AB", "BB") , las = 1)
-		axis(2, at = c((genlab + 8)), labels = c("NC", "AA", "AB", "BB") , las = 1)
-		axis(2, at = c((ibslab + 13)), labels = c("0", "1", "2") , las = 1)
-		
-		axis(4, at = c((genlab + 3)), c(paste( format(ind2.NC,big.mark=",")), paste( format(ind2.AA,big.mark=",")), paste( format(ind2.AB,big.mark=",")), paste( format(ind2.BB,big.mark=","))), las = 1)
-		axis(4, at = c((genlab + 8)), c(paste( format(ind1.NC,big.mark=",")), paste( format(ind1.AA,big.mark=",")), paste( format(ind1.AB,big.mark=",")), paste( format(ind1.BB,big.mark=","))), las = 1)
-		axis(4, at = c((ibslab + 13)), c(paste( format(ibs0,big.mark=",")), paste( format(ibs1,big.mark=",")), paste( format(ibs2,big.mark=","))), las = 1)
-		
-		########################################
-		# Side labels
-		########################################
-		mtext("Genotype", line = 3,side = 2, at = 4.5, cex = 1.15)
-		mtext("Genotype", line = 3,side = 2, at = 9.5, cex = 1.15)
-	 	mtext("Identity by State", line = 3, side = 2, at = 14, cex = 1.15)
-	 	
-	 	########################################
-	 	# Inside labels
-	 	########################################
-	 	text(x = max.tmp / 2, y = 12, paste(printInd1), cex = 1.05)
-	 	text(x = max.tmp / 2, y = 7, paste(printInd2), cex = 1.05)
-	 	
-	 	########################################
-	 	# Box it
-	 	########################################
-	 	rect(0, 2.4, max.tmp, 15.6)
-	 	
-	 	dev.off()
 	}
 	
 	########################################	
@@ -315,18 +350,25 @@ SNPduo = function(x, y, ind1, ind2, savename, pagewidth, pageheight, bychromosom
 # Function to plot the whole genome on
 # a single image.
 ########################################
-genome.plot = function(x, ind1, ind2, savename, pagewidth, pageheight, cexScale=0.20, comparison="None", pchValue=20,doPostscript=TRUE, makeBED = TRUE)
+genome.plot = function(x, ind1, ind2, savename, pagewidth, pageheight, cexScale=0.20, comparison="None", pchValue=20, doPostscript=TRUE, makeBED = TRUE, doPNG=FALSE, DPI=72,chr.offset=NULL)
 {
+	if (is.null(chr.offset))
+	{
+		stop("Chromosome offsets where not passed!!!")
+	}
+	
 	pos = grep("Physical.Position", names(x))
 	chr = grep("Chromosome", names(x))
 	printInd1 = gsub("\\.", " ", names(x)[ind1])
 	printInd2 = gsub("\\.", " ", names(x)[ind2])
 	
-	x = x[, (x[,chr] != "XY" & x[,chr] != "M" & x[,chr] != "Y")]
+	x = x[which(x[,chr] %in% c(1:24,"X","Y")),]
+	#x = x[which(x[,chr] != "XY" & x[,chr] != "M" & x[,chr] != "MT" & x[,chr] != "MITO"),]
 		
 	outputchroms = x[,chr]
 	
-	x[, (x[,chr] == "X")] == 23
+	x[, (x[,chr] == "X")] = 23
+	x[, (x[,chr] == "Y")] = 24
 	
 	if (!is.numeric(x[,chr]))
 	{
@@ -353,7 +395,6 @@ genome.plot = function(x, ind1, ind2, savename, pagewidth, pageheight, cexScale=
 	fortext = data.frame("Chromosome" = outputchroms, "Physical Position" = physPos, "IBS" = -1, "tmp1" = 0, "tmp2" = 0)
 #	forbed  = data.frame("Chromosome" = outputchroms, "Physical Position" = physPos, "IBS" = -1, "tmp1" = 0, "tmp2" = 0)
 	
-	chr.offset = c(0,247249719,490200868,689702695,880975758,1061833624,1232733616,1391555040,1537829866,1678103118,1813477855,1947930239,2080279773,2194422753,2300791338,2401130253,2489957507,2568732249,2644849402,2708661053,2771097017,2818041340,2867732772,3022646526)
 	physPos = physPos + chr.offset[curr[,chr]]
 	
 	###
@@ -404,11 +445,11 @@ genome.plot = function(x, ind1, ind2, savename, pagewidth, pageheight, cexScale=
 	ind2.BB = unlist(Cdata[11])
 	ind2.NC = unlist(Cdata[12])
 	
-	if(doPostscript == TRUE)
+	if(doPostscript == TRUE || doPNG == TRUE)
 	{
 		###################################################
 		# Tick Marks
-		maxpos = max(physPos)
+		maxpos = max(chr.offset[25]) # The 25th slot gives the whole genome size of that version of the genome
 		# Use function to find tick marks
 		ticks = findticks(maxpos)
 		ticklabel = unlist(ticks[2])
@@ -423,59 +464,83 @@ genome.plot = function(x, ind1, ind2, savename, pagewidth, pageheight, cexScale=
 		}
 		###################################################
 		
-		########################################
-		# ps
-		########################################
-		postscript(file = paste(savename,"_", comparison,".ps", sep=""), paper = "special", width = pagewidth, height = pageheight, horizontal = TRUE)
+		# Jittering
+		ibs.jittered = jitter(ibsVector, amount = 0.20) + 13
+		gen1.jittered = jitter(gen1, amount = 0.20) + 8
+		gen2.jittered = jitter(gen2, amount = 0.20) + 3
 		
-		plot.min = 0
-		plot.max = 16
-		par("mar" = c(5, 4, 3, 5) + 0.1)
-		#plot((jitter(ibsVector, amount=0.20)+14)~physPos, xlab=paste("Physical Position ", posprefix, sep=""), ylab="",axes=FALSE, xlim=c(1, max.tmp), ylim=c(plot.min,plot.max), cex=cexScale)
-	 	plot.new()
-	 	plot.window(xlim = c(1, max.tmp), ylim = c(plot.min,plot.max))
-		title(paste("Genome-wide SNPduo Output\n", printInd1, " - ", printInd2, "\nAverage IBS: ", avg.ibs,sep=""))
-		title(xlab = paste("Physical Position", posprefix))
-	 	
-		points(physPos, (jitter(ibsVector, amount = 0.20) + 13), cex = cexScale, pch = pchValue)
-	 	points(physPos, (jitter(gen1, amount = 0.20) + 8), cex = cexScale, pch = pchValue)
-	 	points(physPos, (jitter(gen2, amount = 0.20) + 3), cex = cexScale, pch = pchValue)
-	 	
-		axis(1, at = ticks, labels = as.character(ticklabel))
-		
-		ibslab = c(0,1,2)
-		genlab = c(0,1,2,3)
-		axis(2, at = c((genlab + 3), (genlab + 8), (ibslab + 13)), labels = c("NC", "AA", "AB", "BB","NC", "AA", "AB", "BB", "0", "1", "2") , las = 1)
-		########################################
-		# Add in format command here to get formatted counts and split the axis 4 command into three statements
-		########################################
-		axis(4, at = c((genlab + 3), (genlab + 8), (ibslab + 13) ),c(paste(ind2.NC), paste(ind2.AA), paste(ind2.AB), paste(ind2.BB), paste(ind1.NC), paste(ind1.AA), paste(ind1.AB), paste(ind1.BB), paste(ibs0),paste(ibs1),paste(ibs2)), las = 1)
-		
-		########################################
-		# Side labels
-		########################################
-		mtext("Genotype", line = 3,side = 2, at = 4.5,cex = 1.15)
-		mtext("Genotype", line = 3,side = 2, at = 9.5,cex = 1.15)
-	 	mtext("Identity by State", line = 3, side = 2, at = 14,cex = 1.15)
-	 	
-	 	########################################
-	 	# Inside labels
-	 	########################################
-	 	text(x = max.tmp / 2, y = 7, paste(printInd1))
-	 	text(x = max.tmp / 2, y = 12, paste(printInd2))
-	 	
-	 	########################################
-	 	# Box it
-	 	########################################
-	 	rect(0, 2.4, max.tmp, 15.6)
-	 	
-	 	########################################
-	 	# Chromosome Labels
-	 	########################################
-	 	chr.lines(chr.offset, 0,2)
-	 	ChromosomeLabeling(chr.offset, 1)
-	 	
-	 	dev.off()
+		while (doPostscript || doPNG)
+		{
+			if (doPostscript)
+			{
+				######
+				# ps #
+				######
+				postscript(file = paste(savename,"_", comparison,".ps", sep=""), paper = "special", width = pagewidth, height = pageheight, horizontal = TRUE)
+			} else if (doPNG)
+			{
+				#######
+				# PNG #
+				#######
+				png(filename=paste(savename,"_", comparison,".png", sep=""), width=round(pagewidth*72,0), height=round(pageheight*72,0), units="px", bg="white", type="cairo", antialias="default", res=DPI)
+			}
+			
+			plot.min = 0
+			plot.max = 16
+			par("mar" = c(5, 4, 3, 5) + 0.1)
+			plot.new()
+			plot.window(xlim = c(1, max.tmp), ylim = c(plot.min,plot.max))
+			title(paste("Genome-wide SNPduo Output\n", printInd1, " - ", printInd2, "\nAverage IBS: ", avg.ibs,sep=""))
+			title(xlab = paste("Physical Position", posprefix))
+			
+			points(physPos, ibs.jittered, cex = cexScale, pch = pchValue)
+			points(physPos, gen1.jittered, cex = cexScale, pch = pchValue)
+			points(physPos, gen2.jittered, cex = cexScale, pch = pchValue)
+			
+			axis(1, at = ticks, labels = as.character(ticklabel))
+			
+			ibslab = c(0,1,2)
+			genlab = c(0,1,2,3)
+			axis(2, at = c((genlab + 3), (genlab + 8), (ibslab + 13)), labels = c("NC", "AA", "AB", "BB","NC", "AA", "AB", "BB", "0", "1", "2") , las = 1)
+			########################################
+			# Add in format command here to get formatted counts and split the axis 4 command into three statements
+			########################################
+			axis(4, at = c((genlab + 3), (genlab + 8), (ibslab + 13) ),c(paste(ind2.NC), paste(ind2.AA), paste(ind2.AB), paste(ind2.BB), paste(ind1.NC), paste(ind1.AA), paste(ind1.AB), paste(ind1.BB), paste(ibs0),paste(ibs1),paste(ibs2)), las = 1)
+			
+			########################################
+			# Side labels
+			########################################
+			mtext("Genotype", line = 3,side = 2, at = 4.5,cex = 1.15)
+			mtext("Genotype", line = 3,side = 2, at = 9.5,cex = 1.15)
+			mtext("Identity by State", line = 3, side = 2, at = 14,cex = 1.15)
+			
+			########################################
+			# Inside labels
+			########################################
+			text(x = max.tmp / 2, y = 7, paste(printInd1))
+			text(x = max.tmp / 2, y = 12, paste(printInd2))
+			
+			########################################
+			# Box it
+			########################################
+			rect(0, 2.4, max.tmp, 15.6)
+			
+			########################################
+			# Chromosome Labels
+			########################################
+			chr.lines(chr.offset, 0,2)
+			ChromosomeLabeling(chr.offset, 1)
+			
+			dev.off()
+			
+			if (doPostscript)
+			{
+				doPostscript = FALSE
+			} else if (doPNG)
+			{
+				doPNG = FALSE
+			}
+		}
 	}
 	
 	########################################
@@ -744,7 +809,7 @@ ChromosomeToInteger = function(charChr)
 	charChr[charChr == "Y"] = 25
 	charChr[charChr %in% c("M","MITO","MT")] = 26
 	
-	as.integer(charChr)
+	return(as.integer(charChr))
 }
 
 ########################################
@@ -787,9 +852,7 @@ JitterForWig = function (toJitter, amountJitter = 0.15)
 	
 	toJitter = jitter(toJitter, amount = amountJitter)
 	
-	toJitter = round(toJitter, 3)
-	
-	toJitter	
+	return( round(toJitter,3) )
 }
 
 ########################################
@@ -861,7 +924,7 @@ Cscore.snps = function(IND.1, IND.2)
 	CReturn$ind1AA, CReturn$ind1AB, CReturn$ind1BB, CReturn$ind1NC, 
 	CReturn$ind2AA, CReturn$ind2AB, CReturn$ind2BB, CReturn$ind2NC)
 	
-	forreturn
+	return(forreturn)
 }
 
 ########################################
@@ -895,7 +958,7 @@ gensub = function(genotypes)
 # 	genotypes = gsub("BB",3, genotypes)
 # 	genotypes[which(is.na(genotypes))] = 0
 # 	genotypes = as.numeric(genotypes)
-	as.integer(genotypes)
+	return(as.integer(genotypes))
 }
 
 ########################################
@@ -937,7 +1000,7 @@ chrom_convert = function(charChromosomes)
 		charChromosomes[charChromosomes %in% c("M","MITO","MT")] = 26
 	}
 	
-	as.integer(charChromosomes)
+	return(as.integer(charChromosomes))
 }
 
 ########################################
@@ -994,7 +1057,7 @@ findticks = function(total)
 	
 	ticklabel = ticks / adjustment
 	
-	list(ticks, ticklabel, plotlabel)
+	return(list(ticks, ticklabel, plotlabel))
 }
 
 ########################################
@@ -1004,7 +1067,7 @@ findticks = function(total)
 # making appropriate single summary files
 # and appropriately naming each one.
 ########################################
-genomebychromosome = function (x, ind1, ind2, savename, pswidth, psheight, comparison = "None", doPostscript = TRUE, chromlist = NULL, makeBED = TRUE)
+genomebychromosome = function (x, ind1, ind2, savename, pswidth, psheight, comparison = "None", doPostscript = TRUE, chromlist = NULL, makeBED = TRUE, doPNG=FALSE, DPI=72)
 {
 	printInd1 = gsub("\\.", " ", names(x)[ind1])
 	printInd2 = gsub("\\.", " ", names(x)[ind2])
@@ -1022,7 +1085,7 @@ genomebychromosome = function (x, ind1, ind2, savename, pswidth, psheight, compa
 	for (i in 1:length(chromlist))
 	{
 		chrom = chromlist[i]
-		SNPduo(x,chrom, ind1, ind2, savename, pswidth, psheight, bychromosome = TRUE, comparison = comparison, doPostscript = doPostscript, makeBED = makeBED)
+		SNPduo(x,chrom, ind1, ind2, savename, pswidth, psheight, bychromosome = TRUE, comparison = comparison, doPostscript = doPostscript, makeBED = makeBED, doPNG=doPNG, DPI=DPI, THUMBNAIL=TRUE)
 	}
 }
 
@@ -1046,6 +1109,9 @@ LoadFeatures = function(compiled, genomebuild)
 	} else if (genomebuild == "v36")
 	{
 		load(file.path(compiled, "v36.1cytoband.Rbin"))
+	} else if (genomebuild == "vGRCh37")
+	{
+		load(file.path(compiled, "vGRCh37cytoband.Rbin"))
 	} else
 	{
 		stop(paste("The indicated genome build", genomebuild, "was not found. Please try again.\n"))
@@ -1059,7 +1125,30 @@ LoadFeatures = function(compiled, genomebuild)
 		stop("Cytoband locations did not load properly")
 	}
 
-	cytoband
+	return( cytoband )
+}
+
+##########################################################
+# Load offsets                                           #
+# Load chromosome offsets for genome plot based on build #
+##########################################################
+LoadOffsets = function( compiled, genomebuild )
+{
+	# This only gives offset for 1-22 and X/Y. Line 25 is the TOTAL genome size for giving the x plot size
+	load(file.path(compiled, "offsets.Rbin"))
+	if (!exists("offsets"))
+	{
+		stop("Offset information couldn't be loaded for genome plot!!!")
+	}
+	
+	good.offset = offsets[,genomebuild]
+	
+	if (!exists("good.offset") || is.null(good.offset))
+	{
+		stop("Build not found in offsets!!!")
+	}
+	
+	return( good.offset )
 }
 
 ########################################
@@ -1183,7 +1272,7 @@ bandMax = function(x, cytoband)
 		tmp = 0
 	}
 	
-	tmp
+	return(tmp)
 }
 
 ########################################
@@ -1490,7 +1579,6 @@ SegmentBlocks = function (ibs, position, chromosome, maximumDist = NULL, minIbs0
 # plotBlocks
 # print images of blocks
 ########################################
-
 plotBlocks = function (...)
 {
 	plot.new()
@@ -1543,5 +1631,5 @@ MeanSDFromCounts = function (ibsCounts)
 		summaryStat[i, "SD_IBS"] = sqrt( ( ( ( (2 - summaryStat[i, "Mean_IBS"]) ^ 2) * ibsCounts[i, "IBS2"]) + ( ( (1 - summaryStat[i, "Mean_IBS"]) ^ 2) * ibsCounts[i, "IBS1"]) + ( ( (0 - summaryStat[i, "Mean_IBS"]) ^ 2) * ibsCounts[i, "IBS0"])) / (sum (ibsCounts[i, "IBS2"],ibsCounts[i, "IBS1"], ibsCounts[i, "IBS0"]))) # Standard Deviation
 	}
 	
-	summaryStat
+	return(summaryStat)
 }
