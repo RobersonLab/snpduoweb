@@ -1,0 +1,162 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!--
+########################################
+#  Copyright (c)  2007-2008 Elisha Roberson and Jonathan Pevsner.
+#                 All Rights Reserved.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS "AS IS" AND ANY 
+#  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+#  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR 
+#  PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNERS BE
+#  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+#  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+#  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+#  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+#  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#  POSSIBILITY OF SUCH DAMAGE. THIS SOFTWARE IS FREE FOR PERSONAL OR ACADEMIC
+#  USE. THE SOFTWARE MAY NOT BE USED COMMERCIALLY WITHOUT THE EXPRESS, WRITTEN
+#  PERMISSION OF THE COPYRIGHT HOLDERS. ALL ACTIONS OR PROCEEDINGS RELATED TO 
+#  THIS SOFTWARE SHALL BE TRIED EXCLUSIVELY IN THE STATE AND FEDERAL COURTS 
+#  LOCATED IN THE COUNTY OF BALTIMORE CITY, MARYLAND. USE OF THIS SOFTWARE
+#  IMPLIES ACCEPTANCE OF THIS CONTRACT.
+########################################
+-->
+<html>
+
+<head>
+<title>SNPduoWeb at the Pevsnerlab -- Introduction</title>
+<link rel="stylesheet" type="text/css" href="SNPduo.css">
+<meta name="author" content="Elisha Roberson">
+<meta name="description" content="An introduction to the thinking and schema behind the implementation of the SNPduoWeb tool">
+<meta name="keywords" content="SNP,SNPduo,introduction,explanation,schema">
+</head>
+
+<body>
+
+<!-- ################################  Insert header elements similar to the rest of the site  ################################ -->
+<table class="headertables"> 
+<tr>
+<td>
+<img src="images/SNPduo_titlegraphic.jpg" width="600" height="90" alt="Pevsner Lab Header Picture">
+</td>
+</tr>
+</table>
+
+<table class="headertables">
+<tr>
+<td class="menu">
+<a href="/index.html">Home</a> | 
+<a href="/dragon.htm">DRAGON</a> | 
+<a href="/snomad.htm">SNOMAD</a> | 
+<a href="/snpscan.htm">SNPscan</a> | 
+<a href="/SNPtrio.htm">SNPtrio</a> | 
+<a href="/bioinformatics/bioinf.htm">Bioinformatics</a> | 
+<a href="/bioinfo_course.htm">Bioinformatics Course</a> | 
+<a href="/microarraydata/index.html">Microarrays</a> | 
+<a href="/lead.htm">Lead Poisoning</a><br>
+<a href="/autism_rett.htm">Autism and Rett Syndrome</a> | 
+<a href="/index_ds.htm">Down Syndrome</a> | 
+<a href="http://www.davinciandthebrain.org">Leonardo da Vinci</a> | 
+<a href="/publications.htm">Publications</a> | 
+<a href="/contact.htm">Lab Personnel &amp; Contact Info</a>
+</td>
+</tr>
+</table>
+<!-- ################################  End header elements  ################################ -->
+
+
+<table width="100%" border="0" cellpadding="0" cellspacing="0">
+<tr class="rowcommon cell2">
+<td>
+
+<blockquote>
+<table border="0" cellpadding="6" cellspacing="3">
+<tr class="rowcommon">
+<td class="cell1">Introduction</td>
+<td class="cell2">An introduction into the function of SNPduo</td>
+</tr>
+</table>
+</blockquote>
+
+</td>
+</tr>
+</table>
+
+<hr>
+
+<p>
+<strong>Identity by State</strong>
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SNPduoWeb is a visualization tool built upon the principle of identity by state (IBS). Identity by state is a biological comparison of genotypes between two individuals which states how many identical alleles their genotypes share. The possible combinations are:
+</p>
+
+<ol>
+<li>Sharing two identical alleles (IBS 2)</li>
+<li>Sharing one identical allele (IBS 1)</li>
+<li>Sharing no identical alleles (IBS 0)</li>
+<li>Not enough information (when at least one individual has no calls)</li>
+</ol>
+
+<p>
+<img src="images/schema.jpg" width="346" height="403" alt="SNPduoWeb Schema">
+<br>
+<br>
+<strong>SNPduoWeb Plot</strong>
+
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SNPduoWeb takes SNP data in any of the listed formats, performs a point by point comparison of genotypes between two individuals, and reports back the number of alleles identical by state for each SNP. This information is used to generate a plot to visually display the information. 
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The resulting plot shows the physical position along the X-axis (abscissa) and the identity by state on the Y-axis (ordinate) in the first panel. The number of counts for each IBS type are displayed along the right side of the Y-axis.
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The second panel displays the genotype data for individual one as a function of physical map distance. "No Call" SNPs are displayed on this graph, along with counts for each genotype to the right of the Y-axis.
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The third panel displays the genotype data for individual two in exactly the same fashion as described for individual one.
+
+<br><br>
+<strong>Utility</strong>
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;The more closely related two individuals are the more alleles they will share that are identical by state. That is to say that the closer the relationship the greater the number of alleles shared completely (IBS 2) and partially (IBS 1), while the number of alleles not shared at all (IBS 0) decreases. Therefore SNPduoWeb allows for the display of "relatedness". The uses and features SNPduoWeb include:
+</p>
+
+<ol>
+	<li>Easy to use web interface</li>
+	<li>Code available for local installation
+		<ol class="loweralpha">
+		<li>A visual display of the "relatedness" between two individuals</li>
+		<li>A visual display of genotype
+			<ul>
+				<li>Output includes a publication quality postscript</li>
+			</ul>
+		</li>
+		</ol>
+	</li>
+	<li>Counts of the number of alleles identical by state</li>
+	<li>Counts of each individual genotype</li>
+	<li>Summary tables which include the chromosome, position, genotype for both individuals, and the IBS for each SNP</li>
+	<li>Wig files for display of IBS data on the UCSC Genome Browswer</li>
+</ol>
+
+
+
+<!-- ################################  A navigation footer not needed for distribution code  ################################ -->
+<table width="100%" border="0" cellpadding="6" cellspacing="3">
+<tr class="rowcommon">
+<td class="cell1 navcell1"><a href="index.html" class="navtext">Back</a></td>
+<td class="cell2 navcell2">Return to the SNPduoWeb homepage</td>
+</tr>
+
+<tr class="rowcommon">
+<td class="cell1 navcell1"><a href="/index.html" class="navtext">Home</a></td>
+<td class="cell2 navcell2">Return to the Pevsner Lab Homepage</td>
+</tr>
+
+</table>
+
+<p>
+<img src="images/valid-html401-blue.png" alt="Valid HTML 4.01 Strict!" height="31" width="88">
+<img src="images/vcss-blue.png" alt="Valid CSS!">
+</p>
+
+</body>
+</html>

@@ -1,0 +1,112 @@
+/*
+#############################
+#  Copyright (c)  2007-2008 Elisha Roberson and Jonathan Pevsner.
+#                 All Rights Reserved.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS "AS IS" AND ANY 
+#  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+#  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR 
+#  PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNERS BE
+#  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+#  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+#  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+#  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+#  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#  POSSIBILITY OF SUCH DAMAGE. THIS SOFTWARE IS FREE FOR PERSONAL OR ACADEMIC
+#  USE. THE SOFTWARE MAY NOT BE USED COMMERCIALLY WITHOUT THE EXPRESS, WRITTEN
+#  PERMISSION OF THE COPYRIGHT HOLDERS. ALL ACTIONS OR PROCEEDINGS RELATED TO 
+#  THIS SOFTWARE SHALL BE TRIED EXCLUSIVELY IN THE STATE AND FEDERAL COURTS 
+#  LOCATED IN THE COUNTY OF BALTIMORE CITY, MARYLAND. USE OF THIS SOFTWARE
+#  IMPLIES ACCEPTANCE OF THIS CONTRACT.
+#############################
+*/
+body {
+font-family: verdana, "lucida console",arial, helvetica, sans-serif;
+}
+
+p {
+text-align: justify;
+}
+
+li {
+text-align: justify;
+}
+
+ol.loweralpha {
+	list-style-type: lower-alpha;
+}
+
+ol.lowerroman {
+	list-style-type: lower-roman;
+}
+
+table {
+vertical-align: middle;
+}
+
+table.center {
+margin-left: auto;
+margin-right: auto;
+}
+
+body.center {
+text-align: center;
+}
+
+.headertables {
+width: 100%;
+border: 0;
+border-color: #FFFFFF;
+background-color: #000000;
+border-spacing: 0;
+padding: 0;	
+margin: auto;
+text-align:center;
+}
+
+.menu {
+background-color: #CCCCCC;
+color: #0000CC;
+margin: auto;
+text-align: center;
+font-size: 10pt;
+font-family: verdana, "lucida console", arial, helvetica, sans-serif;
+}
+
+.rowcommon {
+vertical-align: middle;
+}
+
+.cell1 {
+text-align: center;
+background-color: #0000CC;
+color: #FFFFFF;
+}
+
+.cell1width {
+width: 80px;
+}
+
+.cell2 {
+text-align: left;
+background-color: #99CCFF;
+color: #000000;
+font-size: medium;
+}
+
+.cell2width {
+width: 70%;
+}
+
+.navcell1 {
+width: 10%;
+}
+
+.navcell2 {
+width: 90%;
+}
+
+.navtext {
+color: #FFFFFF;
+}

@@ -1,0 +1,178 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!--
+########################################
+#  Copyright (c)  2007-2008 Elisha Roberson and Jonathan Pevsner.
+#                 All Rights Reserved.
+#
+#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS "AS IS" AND ANY 
+#  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+#  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR 
+#  PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNERS BE
+#  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+#  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+#  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+#  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+#  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#  POSSIBILITY OF SUCH DAMAGE. THIS SOFTWARE IS FREE FOR PERSONAL OR ACADEMIC
+#  USE. THE SOFTWARE MAY NOT BE USED COMMERCIALLY WITHOUT THE EXPRESS, WRITTEN
+#  PERMISSION OF THE COPYRIGHT HOLDERS. ALL ACTIONS OR PROCEEDINGS RELATED TO 
+#  THIS SOFTWARE SHALL BE TRIED EXCLUSIVELY IN THE STATE AND FEDERAL COURTS 
+#  LOCATED IN THE COUNTY OF BALTIMORE CITY, MARYLAND. USE OF THIS SOFTWARE
+#  IMPLIES ACCEPTANCE OF THIS CONTRACT.
+########################################
+-->
+<html>
+
+<head>
+<title>SNPduoWeb at the Pevsnerlab -- Code</title>
+<link rel="stylesheet" type="text/css" href="SNPduo.css">
+<meta name="author" content="Elisha Roberson">
+<meta name="description" content="Information on how to download and run SNPduoWeb on a local Linux server">
+<meta name="keywords" content="SNPduo,code,open source,download,free,install,local,linux,R,Perl,C,compiled,current release,requirements,recommendations">
+</head>
+
+<body>
+
+<!-- ################################  Insert header elements similar to the rest of the site  ################################ -->
+<table class="headertables"> 
+<tr>
+<td>
+<img src="images/SNPduo_titlegraphic.jpg" width="600" height="90" alt="Pevsner Lab Header Picture">
+</td>
+</tr>
+</table>
+
+<table class="headertables">
+<tr>
+<td class="menu">
+<a href="/index.html">Home</a> | 
+<a href="/dragon.htm">DRAGON</a> | 
+<a href="/snomad.htm">SNOMAD</a> | 
+<a href="/snpscan.htm">SNPscan</a> | 
+<a href="/SNPtrio.htm">SNPtrio</a> | 
+<a href="/bioinformatics/bioinf.htm">Bioinformatics</a> | 
+<a href="/bioinfo_course.htm">Bioinformatics Course</a> | 
+<a href="/microarraydata/index.html">Microarrays</a> | 
+<a href="/lead.htm">Lead Poisoning</a><br>
+<a href="/autism_rett.htm">Autism and Rett Syndrome</a> | 
+<a href="/index_ds.htm">Down Syndrome</a> | 
+<a href="http://www.davinciandthebrain.org">Leonardo da Vinci</a> | 
+<a href="/publications.htm">Publications</a> | 
+<a href="/contact.htm">Lab Personnel &amp; Contact Info</a>
+</td>
+</tr>
+</table>
+<!-- ################################  End header elements  ################################ -->
+
+
+<table width="100%" border="0" cellpadding="0" cellspacing="0">
+<tr class="rowcommon cell2">
+<td>
+
+<blockquote>
+<table border="0" cellpadding="6" cellspacing="3">
+<tr class="rowcommon">
+<td class="cell1">Code</td>
+<td class="cell2">The code for running SNPduoWeb locally is available for download, and includes files written in html, css, R, C, and perl.</td>
+</tr>
+</table>
+</blockquote>
+
+</td>
+</tr>
+</table>
+
+<hr>
+<p>
+<strong>Requirements</strong>
+</p>
+<blockquote>
+	<p>
+	Linux Operating System
+	<br>
+	
+	<a href="http://cran.r-project.org/">R</a>
+	<br>
+	
+	<a href="http://httpd.apache.org/">Apache</a>
+	<br>
+	
+	<a href="http://gcc.gnu.org/">gcc</a>
+	<br>
+	
+	Zip -- Linux command line utility
+	<br>
+	
+	<a href="http://www.ghostscript.com/">Ghostscript</a>
+	<br>
+	
+	<a href="http://www.perl.org/">Perl</a>
+	<br>
+	
+	<a href="http://search.cpan.org/search%3fmodule=CGI">Perl CGI Module</a>
+	<br>
+	
+	<a href="http://www.imagemagick.org">Image Magick</a>
+	</p>
+</blockquote>
+
+<p>
+<strong>Recommendations</strong>
+</p>
+<blockquote>
+	<p>
+	<a href="http://search.cpan.org/search%3fmodule=Image::Magick">Perl Image::Magick Module</a> -- Greatly increases performance of JPEG creation speed
+	<br><br>
+	
+	Upload directory on same disk partition as HTML output -- Allows Perl rename to move files versus command-line fork to mv
+	</p>
+</blockquote>
+
+<hr>
+<p>
+<strong>Version History</strong><br><br>
+August 07, 2008 -- Server migration altered JPEG creation. A switch to PNG format solved the problem<br>
+June 18, 2008 -- Version 1.00 goes live
+</p>
+<hr>
+<p>
+<strong>Download</strong><br><br>
+<!--<a href="">Current</a> SHA1 Digest: <br><br>-->
+The code is currently in first release and is being adopted for distribution.
+<!-- Archive Releases<br><br> -->
+</p>
+
+<hr>
+
+<p>
+<strong>SNPduo++</strong><br><br>
+A command-line based C++ program for performing SNPduoWeb IBS, Mean_IBS, and Standard Deviation of IBS on large datasets in ped/map or tped/tmap (PLINK compatible) format. Works under Windows and Linux. **Windows requires manual compilation.<br><br>
+<a href="code/SNPduo_v100.zip">Source Code v1.00</a>
+</p>
+
+<hr>
+
+
+<!-- ################################  A navigation footer not needed for distribution code  ################################ -->
+
+<table width="100%" border="0" cellpadding="6" cellspacing="3">
+<tr class="rowcommon">
+<td class="cell1 navcell1"><a href="index.html" class="navtext">Back</a></td>
+<td class="cell2 navcell2">Return to the SNPduoWeb homepage</td>
+</tr>
+
+<tr class="rowcommon">
+<td class="cell1 navcell1"><a href="/index.html" class="navtext">Home</a></td>
+<td class="cell2 navcell2">Return to the Pevsner Lab Homepage</td>
+</tr>
+
+</table>
+
+<p>
+<img src="images/valid-html401-blue.png" alt="Valid HTML 4.01 Strict!" height="31" width="88">
+<img src="images/vcss-blue.png" alt="Valid CSS!">
+</p>
+
+</body>
+</html>

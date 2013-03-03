@@ -1,0 +1,231 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+
+<head>
+<title>SNPduoWeb at the Pevsnerlab -- Upload Page</title>
+<link rel="stylesheet" type="text/css" href="SNPduo.css">
+<meta name="author" content="Elisha Roberson">
+<meta name="description" content="Upload page for the SNPduoWeb web tool">
+<meta name="keywords" content="recombination,identity by state,identity by descent,IBS,IBD,pedigree,upload,visualize,plot,SNP,SNPduo,pair-wise,web tool,">
+</head>
+
+<body>
+
+<!-- ################################  Insert header elements similar to the rest of the site  ################################ -->
+<table class="headertables"> 
+<tr>
+<td>
+<img src="images/SNPduo_titlegraphic.jpg" width="600" height="90" alt="Pevsner Lab Header Picture">
+</td>
+</tr>
+</table>
+
+<table class="headertables">
+<tr>
+<td class="menu">
+<a href="/index.html">Home</a> | 
+<a href="/dragon.htm">DRAGON</a> | 
+<a href="/snomad.htm">SNOMAD</a> | 
+<a href="/snpscan.htm">SNPscan</a> | 
+<a href="/SNPtrio.htm">SNPtrio</a> | 
+<a href="/bioinformatics/bioinf.htm">Bioinformatics</a> | 
+<a href="/bioinfo_course.htm">Bioinformatics Course</a> | 
+<a href="/microarraydata/index.html">Microarrays</a> | 
+<a href="/lead.htm">Lead Poisoning</a><br>
+<a href="/autism_rett.htm">Autism and Rett Syndrome</a> | 
+<a href="/index_ds.htm">Down Syndrome</a> | 
+<a href="http://www.davinciandthebrain.org">Leonardo da Vinci</a> | 
+<a href="/publications.htm">Publications</a> | 
+<a href="/contact.htm">Lab Personnel &amp; Contact Info</a>
+</td>
+</tr>
+</table>
+<!-- ################################  End header elements  ################################ -->
+
+<form enctype="multipart/form-data" action="/cgi-bin/SNPduo/SNPduo.cgi" method="post">
+
+<table width="100%" border="0" cellpadding="6" cellspacing="3">
+
+<tr class="rowcommon">
+<td class="cell1 cell1width">Step 1</td>
+<td class="cell2 cell2width">Select a file to upload</td>
+<td class="cell2"><input type="file" name="file" size="25"></td>
+</tr>
+
+<tr class="rowcommon">
+<td class="cell1 cell1width">Step 2</td>
+<td class="cell2 cell2width">Column Separation</td>
+<td class="cell2"><select name="delimiter">
+<option value="tab" selected>Tab</option>
+<option value="csv">Comma</option>
+<option value="space">Single Space</option>
+</select>
+</tr>
+
+<tr class="rowcommon">
+<td class="cell1 cell1width">Step 3</td>
+<td class="cell2 cell2width">Choose the SNP data type</td>
+<td class="cell2"><select name="platform">
+<option value="Affymetrix4">Affymetrix - CNAT 4.0</option>
+<option value="Custom">Custom Data Format -- see guide</option>
+<!-- <option value="Genotype">Uncoded Allele Format -- see guide</option> -->
+<option value="HapMap">HapMap - Bulk Data Downloads</option>
+<option value="Illumina">Illumina - BeadStudio</option>
+</select></td>
+</tr>
+
+<tr class="rowcommon">
+<td class="cell1 cell1width">Step 4</td>
+<td class="cell2 cell2width">Input which column has individual 1 genotypes</td>
+<td class="cell2"><input name="ind1" type="text" size="10" value=""></td>
+</tr>
+
+<tr class="rowcommon">
+<td class="cell1 cell1width">Step 5</td>
+<td class="cell2 cell2width">Input which column has individual 2 genotypes</td>
+<td class="cell2"><input name="ind2" type="text" size="10" value=""></td>
+</tr>
+
+<tr class="rowcommon">
+<td class="cell1 cell1width">Step 6</td>
+<td class="cell2 cell2width">Select a chromosome</td>
+<td class="cell2">
+
+<select name="chrom" size=3 multiple>
+<option value="1">1</option>
+<option value="2">2</option>
+<option value="3">3</option>
+<option value="4">4</option>
+<option value="5">5</option>
+<option value="6">6</option>
+<option value="7">7</option>
+<option value="8">8</option>
+<option value="9">9</option>
+<option value="10">10</option>
+<option value="11">11</option>
+<option value="12">12</option>
+<option value="13">13</option>
+<option value="14">14</option>
+<option value="15">15</option>
+<option value="16">16</option>
+<option value="17">17</option>
+<option value="18">18</option>
+<option value="19">19</option>
+<option value="20">20</option>
+<option value="21">21</option>
+<option value="22">22</option>
+<option value="X">X</option>
+<option value="Y">Y</option>
+<option value="M">M</option>
+<option value="Genome">Genome</option>
+<option value="GenomeByChromosome">Genome - By Chromosome</option>
+</select>
+
+</td>
+</tr>
+
+<tr class="rowcommon">
+<td class="cell1 cell1width">Step 7</td>
+<td class="cell2 cell2width">Width of postscript output in inches</td>
+<td class="cell2"><input name="pswidth" type="text" size="5" value="11"></td>
+</tr>
+
+<tr class="rowcommon">
+<td class="cell1 cell1width">Step 8</td>
+<td class="cell2 cell2width">Height of postscript output in inches</td>
+<td class="cell2"><input name="psheight" type="text" size="5" value="8.5"></td>
+</tr>
+
+<tr class="rowcommon">
+<td class="cell1 cell1width">Step 9</td>
+<td class="cell2 cell2width">Please choose the NCBI build of the data you are using</td>
+<td class="cell2">
+<select name="genomebuild">
+<option value="v34">Build 34 (July '03 or hg16)</option>
+<option value="v35" selected>Build 35 (May '04 or hg17)</option>
+<option value="v36">Build 36 (March '06 or hg18)</option>
+</select>
+</td>
+</tr>
+
+<tr class="rowcommon">
+<td class="cell1 cell1width">Step 10</td>
+<td class="cell2 cell2width">Should Postscript files be created (required for PNGs)?</td>
+<td class="cell2">
+<select name="makeps">
+<option value="TRUE">Make Postscripts</option>
+<option value="FALSE">Do Not Make Postscripts</option>
+</select>
+</td>
+</tr>
+
+<tr class="rowcommon">
+<td class="cell1 cell1width">Step 11</td>
+<td class="cell2 cell2width">Should PNGs be created from postscript files?</td>
+<td class="cell2">
+<select name="makepng">
+<option value="TRUE">Make PNGs</option>
+<option value="FALSE">Do Not Make PNGs</option>
+</select>
+</td>
+</tr>
+
+<tr class="rowcommon">
+<td class="cell1 cell1width">Step 12</td>
+<td class="cell2 cell2width">Attempt to segment blocks</td>
+<td class="cell2">
+<select name="segmentation">
+<option value="TRUE">Yes</option>
+<option value="FALSE">No</option>
+</select>
+</td>
+</tr>
+
+<tr class="rowcommon">
+<td class="cell1 cell1width">Step 13</td>
+<td class="cell2 cell2width">Run mode</td>
+<td class="cell2">
+<select name="runmode">
+<option value="Normal">Normal Mode</option>
+<option value="Batch">Batch Mode</option>
+<option value="Tabulate">Tabulate Mode</option>
+</select>
+</td>
+</tr>
+
+<tr class="rowcommon">
+<td class="cell1 cell1width">Step 13</td>
+<td class="cell2 cell2width">Submit information</td>
+<td class="cell2"><input type="submit"></td>
+</tr>
+
+</table>
+
+</form>
+
+<!-- ################################  A navigation footer not needed for distribution code  ################################ -->
+
+<table width="100%" border="0" cellpadding="6" cellspacing="3">
+<tr class="rowcommon">
+<td class="cell1 navcell1"><a href="index.html" class="navtext">Back</a></td>
+<td class="cell2 navcell2">Return to the SNPduoWeb homepage</td>
+</tr>
+
+<tr class="rowcommon">
+<td class="cell1 navcell1"><a href="/index.html" class="navtext">Home</a></td>
+<td class="cell2 navcell2">Return to the Pevsner Lab Homepage</td>
+</tr>
+
+</table>
+
+<p>
+<img src="images/valid-html401-blue.png" alt="Valid HTML 4.01 Strict!" height="31" width="88">
+<img src="images/vcss-blue.png" alt="Valid CSS!">
+</p>
+<!-- ################################  A navigation footer not needed for distribution code  ################################ -->
+<p>Last updated on October 17, 2008</p>
+
+</body>
+
+</html>
