@@ -1,94 +1,107 @@
 #!/usr/bin/perl -wT
 
-########################################
-#	SNPduo.cgi
-#	Author: Eli Roberson
-#	Created: September 04, 2007 
-#	Last Edit: March 09, 2012 - ER
-########################################
-#  Copyright (c)  2007-2012 Elisha Roberson and Jonathan Pevsner.
-#                 All Rights Reserved.
-#
-#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS "AS IS" AND ANY 
-#  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-#  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR 
-#  PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNERS BE
-#  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-#  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-#  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-#  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-#  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-#  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-#  POSSIBILITY OF SUCH DAMAGE. THIS SOFTWARE IS FREE FOR PERSONAL OR ACADEMIC
-#  USE. THE SOFTWARE MAY NOT BE USED COMMERCIALLY WITHOUT THE EXPRESS, WRITTEN
-#  PERMISSION OF THE COPYRIGHT HOLDERS. ALL ACTIONS OR PROCEEDINGS RELATED TO 
-#  THIS SOFTWARE SHALL BE TRIED EXCLUSIVELY IN THE STATE AND FEDERAL COURTS 
-#  LOCATED IN THE COUNTY OF BALTIMORE CITY, MARYLAND. USE OF THIS SOFTWARE
-#  IMPLIES ACCEPTANCE OF THIS CONTRACT.
-########################################
-use constant RENAME => "TRUE"; # Rename can be used if the upload and output directories are on THE SAME PARTITION. Otherwise this must be set to FALSE
-use constant CAIRO => "TRUE"; # Use CAIRO png utility in R. If set, this overrides PERLMAGICK directive. Requires png(type="cairo") support in R
-use constant PERLMAGICK => "FALSE"; # Use PerlMagick for image conversion. Overrode by CAIRO "TRUE". If CAIRO = FALSE and PERLMAGICK = "FALSE"
-                                    # the script defaults back to a system command to ImageMagick convert command-line utility
+##################################
+#	SNPduo.cgi                   #
+#	Author: Eli Roberson         #
+#	Created: September 04, 2007  #
+##################################
+
+use constant RENAME => "TRUE";
+# Rename can be used if the upload and output directories
+#are on THE SAME PARTITION. Otherwise this must be set to FALSE
+
+use constant CAIRO => "TRUE";
+# Use CAIRO png utility in R. If set, this overrides
+# PERLMAGICK directive. Requires png(type="cairo") support in R
+
+use constant PERLMAGICK => "FALSE";
+# Use PerlMagick for image conversion. Overrode by CAIRO "TRUE".
+# If CAIRO = FALSE and PERLMAGICK = "FALSE" the script defaults
+# back to a system command to ImageMagick convert command-line utility
 
 ###############################################
 # Location of files and directories on server #
 # Never leave trailing slashes.               #
 # Make all FILE paths absolute.               #
 ###############################################
+my $dataDir = "/home/SNP/uploads/SNPduo";
+# Directory data files are uploaded to. Recommend this should NOT
+# be in the html directory to avoid revealing someones data online.
 
-my $datadir = "/home/SNP/uploads/SNPduo"; # Directory data files are uploaded to. Recommend this should NOT be in the html directory to avoid revealing someones data online.
-my $outputdir = "/home/SNP/html/uploads/SNPduo"; # Directory output is transferred to for web display (must be in apache accessible directory)
-my $webpage = "http://10.8.32.151"; # Domain name of the server. When building output links uses $domain/$outputFolder
-my $outputFolder = "uploads/SNPduo"; # This is the directory RELATIVE to the domain root. Used for linking PNGs (see above line)
-my $codedir = "/home/SNP/cgi-bin/SNPduo"; # Directory where R template scripts are stored
-my $compileddir = "/home/SNP/cgi-bin/SNPduo"; # Directoy where compiled C Code is stored, along with the genomic feature (cytoband) files
-my $pathtoR = "/usr/bin/R"; # Path to R executable
+my $outputDir = "/home/SNP/html/uploads/SNPduo";
+# Directory output is transferred to for web display (must be in
+# apache accessible directory)
+
+my $webpage = "http://127.0.0.1/snpduo";
+# Domain name of the server. When building output links uses
+# $webpage/$outputFolder
+
+my $outputFolder = "uploads/SNPduo";
+# This is the $outputDir RELATIVE to $webpage.
+# Used for linking PNGs (see above lines)
+
+my $codeDir = "/home/SNP/cgi-bin/SNPduo";
+# Directory where R template scripts are stored
+
+my $compiledDir = "/home/SNP/cgi-bin/SNPduo";
+# Directoy where compiled C Code is stored, along with
+# the genomic feature (cytoband) files
+
+my $pathtoR = "/usr/bin/R";
+# Path to R executable
 
 ################################
 # Set file and directory sizes #
 ################################
-use constant FILE_MAX => 1024 * 1024 * 500; #500Mb upload limit
-use constant DIR_MAX => 1024 * 1024 * 5;    # Max 5Gb upload directory. Third number is number GB.
-                                            # Notice there are only 1024 * 1024, instead of three multiplies.
-											# This differs from FILE_MAX since it uses `du -c` output. That
-											# utility reports KB of file space (neglecting the need for 
-											# using 1024*1024*1024*GBsize
-use constant OUTPUT_MAX => 1024 * 1024 * 5; #Max 5Gb of output stored in output directory. Same explain as DIR_MAX
+use constant FILE_MAX => 1024 * 1024 * 500;
+#500Mb upload limit
 
-#########################################################################
-#                    WARNING!!!!!!!!!!!!!!                              #
-#     DO NOT CHANGE BELOW THE LINE UNLESS YOU ARE MODIFYING CODE        #
-# If you modify the code yourself you are responsible for debugging it. #
-#########################################################################
+use constant DIR_MAX => 1024 * 1024 * 5; 
+# Max 5Gb upload directory. Third number is number GB.
+# Notice there are only 1024 * 1024, instead of three multiplies.
+# This differs from FILE_MAX since it uses `du -c` output. That
+# utility reports KB of file space (neglecting the need for 
+# using 1024*1024*1024*
 
-use CGI; # Required because the web input is parsed by CGI interface rather than POST
-if (PERLMAGICK eq "TRUE" and CAIRO eq "FALSE") {
+use constant OUTPUT_MAX => 1024 * 1024 * 5;
+#Max 5Gb of output stored in output directory. Same explain as DIR_MAX
+
+##############################################################
+# WARNING!!!!!!!!!!!!!!                                      #
+# DO NOT CHANGE BELOW THE LINE UNLESS YOU ARE MODIFYING CODE #
+##############################################################
+
+use CGI;
+# Required because the web input is parsed by CGI interface rather than POST
+
+if ( PERLMAGICK eq "TRUE" and CAIRO eq "FALSE" )
+{
 	use Image::Magick; #####PERLMAGICK#####
 }
 
-$CGI::POST_MAX = FILE_MAX; # Set maximum upload size based on $FILE_MAX set above
+$CGI::POST_MAX = FILE_MAX;
+# Set maximum upload size based on $FILE_MAX set above
 
 #########################
 # Set up some constants #
 #########################
-my $current_revision = "v1.3.0-r113";
-my $starttimestamp = timestamp();
-my $pagegenerated = undef;
+my $current_revision = "v1.4.0";
+my $startTimeStamp = timestamp();
+my $pageGenerated = undef;
 my @batchchroms = ();
 
 my $cgi = new CGI;
-my $Rcomparisons = 0;
-my $comparisonVector = 0;
-my $comparisoncounter = 0;
+my $rComparisonIndexString = 0;
+my $totalNumberOfComparisons = 0;
+my $comparisonCounter = 0;
 my $ind2 = " ";
 my $chrom;
 my $chromList;
 
-########################################
-# Save values from post to variables
-# Give errors if not everything is specified
-########################################
+##############################################
+# Save values from post to variables         #
+# Give errors if not everything is specified #
+##############################################
 
 my $runmode = $cgi->param("runmode") or error($cgi, "Runmode not received");
 my $file = $cgi->param("file") or error($cgi, "No file selected for upload");
@@ -97,62 +110,64 @@ my $platform = $cgi->param("platform") or error($cgi, "No platform selected");
 my $ind1 = $cgi->param("ind1") or error($cgi, "Individual 1 not specified");
 if($runmode ne "Batch" && $runmode ne "Tabulate") {$ind2 = $cgi->param("ind2") or error($cgi, "Individual 2 not specified. Please specify individual 2 or use batch mode");}
 my @chromParam = $cgi->param("chrom") or error($cgi, "No chromosome specified");
-my $pswidth = $cgi->param("pswidth") or error($cgi, "No page width specified");
-my $psheight = $cgi->param("psheight") or error($cgi, "No page height specified");
-my $genomebuild = $cgi->param("genomebuild") or error($cgi, "Genome build information not received");
-my $makeps = $cgi->param("makeps") or error($cgi, "Postscript option not received");
-my $makepng = $cgi->param("makepng") or error($cgi, "PNG option not received");
+my $postscriptWidth = $cgi->param("pswidth") or error($cgi, "No page width specified");
+my $postscriptHeight = $cgi->param("psheight") or error($cgi, "No page height specified");
+my $genomeBuild = $cgi->param("genomebuild") or error($cgi, "Genome build information not received");
+my $makePostscript = $cgi->param("makeps") or error($cgi, "Postscript option not received");
+my $makePng = $cgi->param("makepng") or error($cgi, "PNG option not received");
 my $segmentation = $cgi->param("segmentation") or error($cgi, "Segmentation optino not received");
 
-########################################
-# Check for error conditions
-########################################
+##############################
+# Check for error conditions #
+##############################
 
-########################################
-# Untaint variables
-# Note: Taint mode is important to prevent code injection. HIGHLY recommended to keep on
-########################################
+####################################
+# Untaint variables                #
+# Note: Taint mode is important to #
+# prevent code injection.          #
+# HIGHLY recommended to keep on    #
+####################################
 
 # Path
 $ENV{'PATH'} =~ /(.*)/;
 $ENV{'PATH'} = $1;
 
 # Filename
-if ($file =~ /^.*[\/\\]([\w\@\.\-]*)$/)
+if ( $file =~ /^.*[\/\\]([\w\@\.\-]*)$/ )
 {
 	$file = $1;
 }
-elsif ($file =~ /^([\w\@\.\-]*)$/)
+elsif  ($file =~ /^([\w\@\.\-]*)$/ )
 {
 	$file = $1;
 }
 else
 {
-	error($cgi, "The filename \"$file\" contains illegal characters. Rename using only alphanumeric characters, \"_\", \"-\", \".\", and \"@\".");
+	error( $cgi, "The filename \"$file\" contains illegal characters. Rename using only alphanumeric characters, \"_\", \"-\", \".\", and \"@\"." );
 }
 
 # Delimiter
-if ($delimiter =~ /^(\w*)$/)
+if ( $delimiter =~ /^(\w*)$/ )
 {
 	$delimiter = $1
 }
 else
 {
-	error($cgi, "The delimiter field contains illegal characters. If this message persists, please contact the webmaster");
+	error( $cgi, "The delimiter field contains illegal characters. If this message persists, please contact the webmaster" );
 }
 
 # Platform
-if ($platform =~ /^([\w]*)$/)
+if ( $platform =~ /^([\w]*)$/ )
 {
 	$platform = $1;
 }
 else
 {
-	error ($cgi, "Platform field returned illegal characters. If this message persists, please contact the webmaster");
+	error ( $cgi, "Platform field returned illegal characters. If this message persists, please contact the webmaster" );
 }
 
 # Chromosome
-if (scalar(@chromParam) < 1) {error($cgi, "No chromosome specified");}
+if ( scalar(@chromParam) < 1 ) { error($cgi, "No chromosome specified"); }
 
 foreach $tmpChrom (@chromParam)
 {
@@ -171,9 +186,9 @@ foreach $tmpChrom (@chromParam)
 }
 
 # Width
-if ($pswidth =~ /^([\d\.]*)$/)
+if ($postscriptWidth =~ /^([\d\.]*)$/)
 {
-	$pswidth = $1;
+	$postscriptWidth = $1;
 }
 else
 {
@@ -181,9 +196,9 @@ else
 }
 
 # Height
-if ($psheight =~ /^([\d\.]*)$/)
+if ($postscriptHeight =~ /^([\d\.]*)$/)
 {
-	$psheight = $1;
+	$postscriptHeight = $1;
 }
 else
 {
@@ -191,9 +206,9 @@ else
 }
 
 # Genome build
-if ($genomebuild =~ /^([\w\.\-]*)$/)
+if ($genomeBuild =~ /^([\w\.\-]*)$/)
 {
-	$genomebuild = $1;
+	$genomeBuild = $1;
 }
 else
 {
@@ -201,9 +216,9 @@ else
 }
 
 # PNG
-if ($makepng =~ /^(\w*)$/)
+if ($makePng =~ /^(\w*)$/)
 {
-	$makepng = $1;
+	$makePng = $1;
 }
 else
 {
@@ -211,9 +226,9 @@ else
 }
 
 #Postscript
-if ($makeps =~ /^(\w*)$/)
+if ($makePostscript =~ /^(\w*)$/)
 {
-	$makeps = $1;
+	$makePostscript = $1;
 }
 else
 {
@@ -243,7 +258,7 @@ else
 # Individuals to compare
 $ind1 =~ s/\s//g;
 $ind2 =~ s/\s//g;
-if ($runmode ne "Batch" && $runmode ne "Tabulate")
+if ( $runmode ne "Batch" && $runmode ne "Tabulate" )
 {
 	# Individual 1
 	if ($ind1 =~ /^(\d*)$/)
@@ -265,58 +280,59 @@ if ($runmode ne "Batch" && $runmode ne "Tabulate")
 		error ($cgi, "The field for individual 2 contains illegal characters. Please try again");
 	}
 }
-elsif ($runmode eq  "Batch" || $runmode eq "Tabulate")
+elsif ( $runmode eq  "Batch" || $runmode eq "Tabulate" )
 {
 	# Individual 1
 	$ind1 =~ s/^,//;
 	
-	if ($ind1 =~ /^([\d,\-\:]*)$/)
+	if ( $ind1 =~ /^([\d,\-\:]*)$/ )
 	{
 		$ind1 = $1;
 	}
 	else
 	{
-		error ($cgi, "Input of multiple columns failed. This field should contain numbers separated by commas. Whitespace is allowed. Please try again");
+		error ( $cgi, "Input of multiple columns failed. This field should contain numbers separated by commas. Whitespace is allowed. Please try again" );
 	}
 }
 
-########################################
-# Prep individuals for R Code vectors
-########################################
-
-if ($runmode ne "Batch" && $runmode ne "Tabulate")
+#######################################
+# Prep individuals for R Code vectors #
+#######################################
+if ( $runmode ne "Batch" && $runmode ne "Tabulate" )
 {
-	if ($platform eq "HapMap")
+	if ( $platform eq "HapMap" )
 	{
 		$ind1 -= 9;
 		$ind2 -= 9;
 	}
-	$Rcomparisons = "c\($ind1, $ind2\)";
-	$comparisonVector = 1;
+	$rComparisonIndexString = "c\($ind1, $ind2\)";
+	$totalNumberOfComparisons = 1;
 }
-elsif ($runmode eq "Batch" || $runmode eq "Tabulate")
+elsif ( $runmode eq "Batch" || $runmode eq "Tabulate" )
 {	
-	my @tmpComparisons = split(/,/, $ind1);
-	my $NumberOfComparisons = 0;
+	my @tmpComparisons = split( /,/, $ind1 );
+	my $numberOfComparisons = 0;
 	
-	$Rcomparisons = "c\(";
+	$rComparisonIndexString = 'c(';
 	
-	while (<@tmpComparisons>)
+	while ( <@tmpComparisons> )
 	{
 		my $col = $_;
 		
-		if ($col =~ /[\:\-]/)
+		if ( $col =~ /[\:\-]/ )
 		{
 			local $" = ',';
-			my ($startCol, $endCol) = split /[\:\-]/, $col;
-			if ($platform eq "HapMap")
+			my ( $startCol, $endCol ) = split( /[\:\-]/, $col );
+			
+			if ( $platform eq "HapMap" )
 			{
 				$startCol -= 9;
 				$endCol -= 9;
 			}
+			
 			my @colArray = $startCol .. $endCol;
-			$Rcomparisons .= "@colArray,";
-			$NumberOfComparisons += scalar(@colArray);
+			$rComparisonIndexString .= "@colArray,";
+			$numberOfComparisons += scalar( @colArray );
 		}
 		else
 		{
@@ -324,42 +340,43 @@ elsif ($runmode eq "Batch" || $runmode eq "Tabulate")
 			{
 				$col -= 9;
 			}
-			$Rcomparisons .= "$col,";
-			++$NumberOfComparisons;
+			
+			$rComparisonIndexString .= "$col,";
+			++$numberOfComparisons;
 		}
 	}
 	
-	$Rcomparisons =~ s/,$//;
-	$Rcomparisons .= "\)";
+	$rComparisonIndexString =~ s/,$//;
+	$rComparisonIndexString .= ')';
 	
-	$comparisonVector = ($NumberOfComparisons * ($NumberOfComparisons - 1)) / 2;
+	$totalNumberOfComparisons = ( $numberOfComparisons * ( $numberOfComparisons - 1 ) ) / 2;
 }
 
-########################################
-# Prep chromosome list
-########################################
+########################
+# Prep chromosome list #
+########################
 $chromList = "c(";
-while (<@chromParam>)
+while ( <@chromParam> )
 {
 	my $tmpValue = $_;
-	chomp ($tmpValue);
+	chomp ( $tmpValue );
 	$chromList .= "\"$tmpValue\",";
 }
 
 $chromList =~ s/,$//;
 $chromList .= ")";
 
-if ($chromList =~ /GenomeByChromosome/)
+if ( $chromList =~ /GenomeByChromosome/ )
 {
 	$chrom = "GenomeByChromosome";
 	$chromList = NULL;
 }
-elsif ($chromList =~ /Genome/)
+elsif ( $chromList =~ /Genome/ )
 {
 	$chrom = "Genome";
 	$chromList = NULL;
 }
-elsif (scalar(@chromParam) > 1)
+elsif ( scalar(@chromParam) > 1 )
 {
 	$chrom = "GenomeByChromosome";
 }
@@ -368,9 +385,9 @@ else
 	$chrom = $chromParam[0];
 }
 
-########################################
-# Adjust filename
-########################################
+###################
+# Adjust filename #
+###################
 
 # Filename must start with a number or letter, not other characters or whitespace
 if ($file !~ m/^\w.*$/)
@@ -378,15 +395,15 @@ if ($file !~ m/^\w.*$/)
     error($cgi, "Filename  \"${file}\" doesn't begin with number or letter"); 
 }
 
-##
-# Get rid of whitespace in filename
-##
+#####################################
+# Get rid of whitespace in filename #
+#####################################
 my $upload = $file;
 $upload =~ s/\s/_/g;
 
-########################################
-# Check column separator
-########################################
+##########################
+# Check column separator #
+##########################
 if ($delimiter eq "tab")
 {
 	$delimiter = '"\t"';
@@ -404,59 +421,52 @@ else
 	error($cgi, "Delimiter $delimiter not recognized");
 }
 
-########################################
-# Check for upload directory size
-# Clean if necessary
-########################################
-DirectoryCheck ($datadir, $outputdir);
+###################################
+# Check for upload directory size #
+# Clean if necessary              #
+###################################
+DirectoryCheck( $dataDir, $outputDir );
 
-########################################
-# Give a server side filename to the upload
-########################################
+#############################################
+# Give a server side filename to the upload #
+#############################################
 
-##
 # Test in a loop whether a file with the same name as the upload exists on the server
 # If it does, add a digit to the end of the filename and repeat the test.
 # Auto increment the digit until the filename is unique
-##
-until (! -e "${datadir}/${upload}")
+
+until (! -e "${dataDir}/${upload}")
 {
 	$upload =~ s/^(\d*)(\S+)$/($1||0) + 1 . $2/e;
 }
 
-########################################
-# Don't call upload until now so errors
-# happen before the file starts to upload
-########################################
+###########################################
+# Don't call upload until now so errors   #
+# happen before the file starts to upload #
+###########################################
 my $uploadStart = time();
-my $fh = $cgi->upload("file") or error($cgi, "File upload did not begin properly");
+my $fh = $cgi->upload( "file" ) or error( $cgi, "File upload did not begin properly" );
 
-########################################
-# Start platform adjustments
-########################################
+##############################
+# Start platform adjustments #
+##############################
 my $rowcounts = -1; # Set the row count to -1 so that headers are ignored
 
-########################################
-# Illumina
-########################################
+############
+# Illumina #
+############
 if ($platform eq "Illumina")
 {
-	##
 	# Upload the file first
-	##
-    open (LOCAL, ">${datadir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!"); 
+	open (LOCAL, ">${dataDir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!"); 
 	
-    ##
-    # Necessary for windows servers. Greater portability by specifying this
-    ##
-    binmode LOCAL;
-    binmode $fh;
+	# Necessary for windows servers. Greater portability by specifying this
+	binmode LOCAL;
+	binmode $fh;
 
-    IlluminaFH: while (<$fh>)
-    {		
-	    ##
+	IlluminaFH: while (<$fh>)
+	{		
 		# Skip commented lines
-		##
 		if (/^\s*\#/)
 		{
 			next IlluminaFH;
@@ -466,30 +476,22 @@ if ($platform eq "Illumina")
 			next IlluminaFH;
 		}
 		
-		##
 		# R doesn't like # so get rid of it elsewhere
-		##
 		s/\#//g;
-		
-		##    
+		   
 		# Make the header something the script will find. Substitute Chr field for Chromosome
-		##
 		s/^Chr${delimiter}/Chromosome${delimiter}/g;
 		s/${delimiter}Chr${delimiter}/${delimiter}Chromosome${delimiter}/g;
 		s/${delimiter}Chr\n/${delimiter}Chromosome\n/g;
 		
-		##
+
 		# Adjust the name of the position column
-		##
 		s/^Position${delimiter}/Physical.Position${delimiter}/g;
 		s/${delimiter}Position${delimiter}/${delimiter}Physical.Position${delimiter}/g;
 		s/${delimiter}Position\n/${delimiter}Physical.Position\n/g;
 		
-		##
 		# Get read or .GType suffix on genotype columns
-		##
 		s/\.GType//g;
-		
 		
 		print LOCAL $_; # Now write the file
 		
@@ -498,31 +500,24 @@ if ($platform eq "Illumina")
 
     close LOCAL; # Close things nicely
     
-########################################
-    WriteRTemplate ($codedir,$datadir,"IlluminaTemplate",$upload,$chrom,$chromList,$Rcomparisons,$compileddir,$rowcounts,$pswidth,$psheight,$genomebuild, $comparisonVector,$delimiter,$makeps, $runmode,$segmentation);
+    WriteRTemplate( $codeDir,$dataDir,$upload,$chrom,$chromList,$rComparisonIndexString,$compiledDir,$rowcounts,$postscriptWidth,$postscriptHeight,$genomeBuild, $totalNumberOfComparisons,$delimiter,$makePostscript, $runmode,$segmentation, 0 );
 }
 
 elsif ($platform eq "Affymetrix4")
 {	
-	########################################
-	# Affymetrix
-	########################################
-	##
+	##############
+	# Affymetrix #
+	##############
 	# Upload the file, substituting in No Calls where necessary"
-	##
-    open (LOCAL, ">${datadir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!"); 
+    open (LOCAL, ">${dataDir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!"); 
 	
-    ##
     # Necessary for windows servers. Greater portability by specifying this
-    ##
     binmode LOCAL;
     binmode $fh;
 
     AffyFH: while (<$fh>)
     {	
-	    ##
-	    # Skip commented lines
-	    ##
+		# Skip commented lines
 		if (/^\s*\#/)
 		{
 			next AffyFH;
@@ -532,20 +527,14 @@ elsif ($platform eq "Affymetrix4")
 			next AffyFH;
 		}
 		
-		##
 		# R doesn't like # so get rid of it elsewhere
-		##
 		s/\#//g;
 		
-		##    
 		# New CNAT No Calls are blanks. Substitute so the program sees them
-		##
 		s/${delimiter}${delimiter}/${delimiter}NoCall${delimiter}/g;
 		s/${delimiter}\n/${delimiter}NoCall\n/g;
 		
-		##
 		# Remove annoying suffixes
-		##
 		s/_Call//g;
 		s/\.brlmm//g;
 		s/\.loh//g;
@@ -555,10 +544,8 @@ elsif ($platform eq "Affymetrix4")
     }
 
     close LOCAL; # Close things nicely
-    
-#######################################
-	WriteRTemplate ($codedir,$datadir,"AffyCNAT4Template",$upload,$chrom,$chromList,$Rcomparisons,$compileddir,$rowcounts,$pswidth,$psheight,$genomebuild, $comparisonVector,$delimiter,$makeps, $runmode,$segmentation);
-	
+
+	WriteRTemplate( $codeDir,$dataDir,$upload,$chrom,$chromList,$rComparisonIndexString,$compiledDir,$rowcounts,$postscriptWidth,$postscriptHeight,$genomeBuild, $totalNumberOfComparisons,$delimiter,$makePostscript, $runmode,$segmentation, 1 );
 }
 
 elsif ($platform eq "HapMap")
@@ -578,22 +565,18 @@ elsif ($platform eq "HapMap")
 		$HapMapDelimiter = " ";
 	}
 	
-	########################################
-	# HapMap
-	########################################
-	open LOCAL, ">${datadir}/${upload}" or error ($cgi,  "Cannot make file for upload:$!"); 
+	##########
+	# HapMap #
+	##########
+	open LOCAL, ">${dataDir}/${upload}" or error ($cgi,  "Cannot make file for upload:$!"); 
 	
-    ##
-    # Necessary for windows servers. Greater portability by specifying this
-    ##
-    binmode LOCAL;
+	# Necessary for windows servers. Greater portability by specifying this
+	binmode LOCAL;
     binmode $fh;
 
     HapMapFH: while (<$fh>)
     {
-		##
-	    # Skip commented lines
-	    ##
+		# Skip commented lines
 		if (/^\s*\#/)
 		{
 			next HapMapFH;
@@ -603,20 +586,15 @@ elsif ($platform eq "HapMap")
 			next HapMapFH;
 		}
 	    
-		##
 		# R doesn't like # so get rid of it elsewhere
-		##
 		s/\#//g;
 	    
-		##
 		# Split data up for printing
-		##
 		my ($rs, $allele, $chromosome, $position, $strand, $build, $center, $prot, $assay, $panel, $QC, @genotypes) = split(/$HapMapDelimiter/);
 	    
-		##
 		# Before printing anything, check alleles to see how many there are.
 		# If there are more than two, skip it.
-		##
+
 		my @alleletest = split /\//, $allele;
 	    
 		if(scalar(@alleletest) > 2)
@@ -624,16 +602,12 @@ elsif ($platform eq "HapMap")
 			next HapMapFH;
 		}
 	    
-		##
 		# Change chr and pos to the same as others
-		##
 		$chromosome =~ s/chrom/Chromosome/g;
 		$chromosome =~ s/chr//g;
 		$position =~ s/pos/Physical.Position/g;
 	    
-		##
 		# Print the chromosome and position
-		##
 		print LOCAL "${chromosome}${HapMapDelimiter}${position}";
 	    
 		if (scalar(@alleletest) < 2)
@@ -645,14 +619,10 @@ elsif ($platform eq "HapMap")
 			next HapMapFH;
 		}
 		
-		##
 		# Change genotypes
-		##
 		my ($Aallele, $Ballele) = split /\//, $allele; # Split the two alleles specified into two different scalars
 		
-		##
 		# Run a loop that will substitute the genotypes
-		##
 		foreach $genotype (@genotypes)
 		{
 			my ($gen1, $gen2) = split(//,$genotype);
@@ -700,32 +670,24 @@ elsif ($platform eq "HapMap")
 	
 	close LOCAL; # Close things nicely
 
-	##############################
-	WriteRTemplate ($codedir,$datadir,"HapMapTemplate",$upload,$chrom,$chromList,$Rcomparisons,$compileddir,$rowcounts,$pswidth,$psheight,$genomebuild, $comparisonVector,$delimiter,$makeps, $runmode,$segmentation);
-
+	WriteRTemplate( $codeDir,$dataDir,$upload,$chrom,$chromList,$rComparisonIndexString,$compiledDir,$rowcounts,$postscriptWidth,$postscriptHeight,$genomeBuild, $totalNumberOfComparisons,$delimiter,$makePostscript, $runmode,$segmentation, 0 );
 }
 
 elsif ($platform eq "Custom")
 {
-	########################################
-	# Custom
-	########################################
-	##
+	##########
+	# Custom #
+	##########
 	# Upload the file first
-	##
-	open (LOCAL, ">${datadir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!"); 
+	open (LOCAL, ">${dataDir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!"); 
 	
-	##
 	# Necessary for windows servers. Greater portability by specifying this
-	##
 	binmode LOCAL;
 	binmode $fh;
 
 	CustomFH: while (<$fh>)
 	{		
-		##
 		# Skip commented lines
-		##
 		if (/^\s*\#/)
 		{
 			next CustomFH;
@@ -735,9 +697,7 @@ elsif ($platform eq "Custom")
 			next CustomFH;
 		}
 		
-		##
 		# R doesn't like # so get rid of it elsewhere
-		##
 		s/\#//g;
 				
 		print LOCAL $_; # Now write the file
@@ -747,34 +707,33 @@ elsif ($platform eq "Custom")
 
 	close LOCAL; # Close things nicely
 	
-########################################
-	WriteRTemplate ($codedir,$datadir,"CustomTemplate",$upload,$chrom,$chromList,$Rcomparisons,$compileddir,$rowcounts,$pswidth,$psheight,$genomebuild, $comparisonVector,$delimiter,$makeps, $runmode,$segmentation); 
+	WriteRTemplate( $codeDir,$dataDir,$upload,$chrom,$chromList,$rComparisonIndexString,$compiledDir,$rowcounts,$postscriptWidth,$postscriptHeight,$genomeBuild, $totalNumberOfComparisons,$delimiter,$makePostscript, $runmode,$segmentation, 0 ); 
 }
 
 my $uploadEnd = time();
 my $uploadTime = $uploadEnd - $uploadStart;
 
 # Die if the file uploaded was blank
-error( $cgi, "The uploaded file appears to be empty..." ) if (! -s "${datadir}/${upload}");
+error( $cgi, "The uploaded file appears to be empty..." ) if (! -s "${dataDir}/${upload}");
 
-########################################
-# Run R computation
-########################################
+#####################
+# Run R computation #
+#####################
 my $ibsStart = time();
-system ("cd ${datadir}; $pathtoR --vanilla <${upload}.R 1>${datadir}/${upload}.R.screendump 2>${datadir}/${upload}.R.debug"); # Make call to R to perform SNPduo and make plots
+system ("cd ${dataDir}; $pathtoR --vanilla <${upload}.R 1>${dataDir}/${upload}.R.screendump 2>${dataDir}/${upload}.R.debug"); # Make call to R to perform SNPduo and make plots
 my $ibsEnd = time();
 my $ibsTime = $ibsEnd - $ibsStart;
 
-########################################
-# See if R finished correctly
-# Throw an error otherwise
-########################################
+###############################
+# See if R finished correctly #
+# Throw an error otherwise    #
+###############################
 
-my $DebugSize = -s "${datadir}/${upload}.R.debug";
+my $DebugSize = -s "${dataDir}/${upload}.R.debug";
 
 if ($DebugSize > 0)
 {	
-	open RERROR, "${datadir}/${upload}.R.debug" or error($cgi, "An R error occurred, but I can't read the debugging file ${upload}.R.debug:$!");
+	open RERROR, "${dataDir}/${upload}.R.debug" or error($cgi, "An R error occurred, but I can't read the debugging file ${upload}.R.debug:$!");
 		
 	my @allRerror = <RERROR>;
 	foreach $error (@allRerror)
@@ -794,16 +753,16 @@ if ($DebugSize > 0)
 }
 else
 {
-	unlink("${datadir}/${upload}.R.debug");
-	unlink("${datadir}/${upload}.R.screendump");
+	unlink("${dataDir}/${upload}.R.debug");
+	unlink("${dataDir}/${upload}.R.screendump");
 }
  
-########################################
-# Make an bed file for display on UCSC genome browser
-########################################
+#######################################################
+# Make an bed file for display on UCSC genome browser #
+#######################################################
 if ($runmode ne "Tabulate" && $segmentation eq "TRUE")
 {
-	open BEDFILE, ">${datadir}/${upload}.bed" or error($cgi,  "Cannot create UCSC browser file: $!");
+	open BEDFILE, ">${dataDir}/${upload}.bed" or error( $cgi,  "Cannot create UCSC browser file: $!" );
 	my $bedchrom = "chr" . $chrom; # Specify chromosome
 	
 	if ($bedchrom =~ /Genome/)
@@ -813,7 +772,7 @@ if ($runmode ne "Tabulate" && $segmentation eq "TRUE")
 	
 	print BEDFILE "browser position $bedchrom\n";
 	
-	for ($comparisoncounter = 1; $comparisoncounter <= $comparisonVector; ++$comparisoncounter)
+	for ($comparisonCounter = 1; $comparisonCounter <= $totalNumberOfComparisons; ++$comparisonCounter)
 	{
 		my $bedfileInd1 = "";
 		my $bedfileInd2 = "";
@@ -821,11 +780,11 @@ if ($runmode ne "Tabulate" && $segmentation eq "TRUE")
 		my $bedfileRow = "Ind1";
 		my $writeTrack = 1;
 		
-		my $currentComparison = $comparisoncounter;
+		my $currentComparison = $comparisonCounter;
 		my $bedsummaryfile = $upload;
 		my $bedchromprev = 0;
 		$bedsummaryfile .= "_${currentComparison}.bedsummary.txt"; # Specify the filename for the overall summary data
-		open FORBED, "${datadir}/${bedsummaryfile}" or error($cgi,  "Cannot find $bedsummaryfile to generate bed file: $!"); 
+		open FORBED, "${dataDir}/${bedsummaryfile}" or error($cgi,  "Cannot find $bedsummaryfile to generate bed file: $!"); 
 		 
 		BEDLoop: while (<FORBED>)
 		{
@@ -850,22 +809,18 @@ if ($runmode ne "Tabulate" && $segmentation eq "TRUE")
 				
 				if ($type eq "IBS2")
 				{
-					#$rgb = "0,255,0"; # Lime
 					$rgb = "77,175,74";
 				}
 				elsif ($type eq "IBS1")
 				{
-					#$rgb = "99,184,255"; # Steelblue1
 					$rgb = "55,126,184";
 				}
 				elsif ($type eq "IBS0")
 				{
-					#$rgb = "255,0,0"; # Red
 					$rgb = "228,26,28";
 				}
 				elsif ($type eq "Aberration")
 				{
-					#$rgb = "191,62,255"; # Dark orchid
 					$rgb = "152,78,163";
 				}
 				else
@@ -907,16 +862,14 @@ if ($runmode ne "Tabulate" && $segmentation eq "TRUE")
 		}
 			
 		close (FORBED);
-		unlink ("${datadir}/${bedsummaryfile}");
+		unlink ("${dataDir}/${bedsummaryfile}");
 	}
 	close (BEDFILE);
 }
 	
 ########################################
-#
-# The next section applies only to the
-# analysis of individual chromosomes.
-#
+# The next section applies only to the #
+# analysis of individual chromosomes.  #
 ########################################
 my @genos = 0;
 my @sumind1 = 0;
@@ -926,36 +879,34 @@ my @count = 0;
 
 if ($chrom ne "GenomeByChromosome" && $runmode ne "Tabulate")
 {
-	for ($comparisoncounter = 1; $comparisoncounter <= $comparisonVector; ++$comparisoncounter)
+	for ($comparisonCounter = 1; $comparisonCounter <= $totalNumberOfComparisons; ++$comparisonCounter)
 	{		
-		my $currentComparison = $comparisoncounter;
+		my $currentComparison = $comparisonCounter;
 		
-		########################################
-		#
-		# This section section applies only to the
-		# analysis of individual chromosomes or
-		# whole genome on one plot
-		#
-		########################################
+		############################################
+		# This section section applies only to the #
+		# analysis of individual chromosomes or    #
+		# whole genome on one plot                 #
+		############################################
 				
-		if ($makepng eq "TRUE" && $makeps eq "TRUE")
+		if ($makePng eq "TRUE" && $makePostscript eq "TRUE")
 		{
 			if (PERLMAGICK eq "TRUE" && CAIRO eq "FALSE")
 			{
-				PerlMagickConvertPStoPNG($datadir,$upload,$currentComparison,$pswidth,$psheight,"FALSE"); #####PERLMAGICK#####
+				PerlMagickConvertPStoPNG($dataDir,$upload,$currentComparison,$postscriptWidth,$postscriptHeight,"FALSE"); #####PERLMAGICK#####
 			}
 			elsif (CAIRO eq "FALSE")
 			{
-				CLForkConvertPStoPNG($datadir,$upload,$currentComparison,$pswidth,$psheight,"FALSE");#####NOPERLMAGICK#####
+				CLForkConvertPStoPNG($dataDir,$upload,$currentComparison,$postscriptWidth,$postscriptHeight,"FALSE");#####NOPERLMAGICK#####
 			}
 			
 			if (RENAME eq "TRUE")
 			{
-				rename ("${datadir}/${upload}_${currentComparison}.png", "${outputdir}/${upload}_${currentComparison}.png"); #####RENAME#####
+				rename ("${dataDir}/${upload}_${currentComparison}.png", "${outputDir}/${upload}_${currentComparison}.png"); #####RENAME#####
 			}
 			else
 			{
-				system("mv ${datadir}/${upload}_${currentComparison}.png ${outputdir}/${upload}_${currentComparison}.png"); #####NORENAME#####
+				system("mv ${dataDir}/${upload}_${currentComparison}.png ${outputDir}/${upload}_${currentComparison}.png"); #####NORENAME#####
 			}
 		}
 			
@@ -964,56 +915,47 @@ if ($chrom ne "GenomeByChromosome" && $runmode ne "Tabulate")
 		########################################
 		# Using mv command-line directive
 		if (RENAME ne "TRUE")
-		{
-# 			if ($makeps eq "TRUE" && $makepng eq "TRUE")
-# 			{
-# 				system("mv ${datadir}/${upload}.ps $outputdir/${upload}.ps; mv ${datadir}/${upload}.png $outputdir/${upload}.png; mv ${datadir}/${upload}.summary.txt $outputdir/$upload.summary.txt"); #####NORENAME#####
-# 			}
-			 
-			if ($makeps eq "TRUE")
+		{	 
+			if ($makePostscript eq "TRUE")
 			{
-				system("mv ${datadir}/${upload}_${currentComparison}.ps $outputdir/${upload}_${currentComparison}.ps; mv ${datadir}/${upload}_${currentComparison}.summary.txt $outputdir/${upload}_${currentComparison}.summary.txt");  #####NORENAME#####
+				system("mv ${dataDir}/${upload}_${currentComparison}.ps $outputDir/${upload}_${currentComparison}.ps; mv ${dataDir}/${upload}_${currentComparison}.summary.txt $outputDir/${upload}_${currentComparison}.summary.txt");  #####NORENAME#####
 			}
 			else
 			{
-				system("mv ${datadir}/${upload}_${currentComparison}.summary.txt $outputdir/${upload}_${currentComparison}.summary.txt");  #####NORENAME#####
+				system("mv ${dataDir}/${upload}_${currentComparison}.summary.txt $outputDir/${upload}_${currentComparison}.summary.txt");  #####NORENAME#####
 			}
 		}
 		
 		# Using rename
 	 	if (RENAME eq "TRUE")
 		{
-			if ($makeps eq "TRUE")
+			if ($makePostscript eq "TRUE")
 			{
-				rename("${datadir}/${upload}_${currentComparison}.ps","${outputdir}/${upload}_${currentComparison}.ps");
+				rename("${dataDir}/${upload}_${currentComparison}.ps","${outputDir}/${upload}_${currentComparison}.ps");
 			}
-			rename ("${datadir}/${upload}_${currentComparison}.summary.txt", "${outputdir}/${upload}_${currentComparison}.summary.txt"); #####RENAME#####
+			rename ("${dataDir}/${upload}_${currentComparison}.summary.txt", "${outputDir}/${upload}_${currentComparison}.summary.txt"); #####RENAME#####
 		}
 		
 		# Make zip file
-	 	if ($makeps eq "TRUE" && $makepng eq "TRUE")
+	 	if ($makePostscript eq "TRUE" && $makePng eq "TRUE")
 	 	{
-			system ("cd $outputdir; zip -q ${upload}_${currentComparison}.zip ${upload}_${currentComparison}.ps ${upload}_${currentComparison}.png ${upload}.summary_${currentComparison}.txt");
+			system ("cd $outputDir; zip -q ${upload}_${currentComparison}.zip ${upload}_${currentComparison}.ps ${upload}_${currentComparison}.png ${upload}.summary_${currentComparison}.txt");
 		}
-		elsif ($makeps eq "TRUE" && $makepng eq "FALSE")
+		elsif ($makePostscript eq "TRUE" && $makePng eq "FALSE")
 		{
-			system ("cd $outputdir; zip -q ${upload}_${currentComparison}.zip ${upload}_${currentComparison}.ps ${upload}_${currentComparison}.summary.txt");
+			system ("cd $outputDir; zip -q ${upload}_${currentComparison}.zip ${upload}_${currentComparison}.ps ${upload}_${currentComparison}.summary.txt");
 		}
 		else
 		{
-			system ("cd $outputdir; zip -q ${upload}_${currentComparison}.zip ${upload}_${currentComparison}.summary.txt");
+			system ("cd $outputDir; zip -q ${upload}_${currentComparison}.zip ${upload}_${currentComparison}.summary.txt");
 		}
 		
-		########################################
-		# Make a table for the results page
-		########################################
-		##
-		# Pull in summary data
-		##
-		open GENO, "${datadir}/${upload}_${currentComparison}.gensum" or error ($cgi,  "Cannot open genotype summary:$!"); 
-#		my @genos = 0;
-#		my @sumind1 = 0;
-#		my @sumind2 = 0;
+		#####################################
+		# Make a table for the results page #
+		#####################################
+		# Pull in summary data #
+		########################
+		open GENO, "${dataDir}/${upload}_${currentComparison}.gensum" or error ($cgi,  "Cannot open genotype summary:$!"); 
 		
 		while(<GENO>)
 		{
@@ -1028,11 +970,9 @@ if ($chrom ne "GenomeByChromosome" && $runmode ne "Tabulate")
 		}
 		close(GENO);
 		
-		unlink ("${datadir}/${upload}_${currentComparison}.gensum");
+		unlink ("${dataDir}/${upload}_${currentComparison}.gensum");
 		
-		open IBS, "${datadir}/${upload}_${currentComparison}.ibssum" or error ($cgi,  "Cannot open IBS summary:$!"); 
-#		my @ibs = 0;
-#		my @count = 0;
+		open IBS, "${dataDir}/${upload}_${currentComparison}.ibssum" or error ($cgi,  "Cannot open IBS summary:$!"); 
 		
 		while(<IBS>)
 		{
@@ -1045,47 +985,24 @@ if ($chrom ne "GenomeByChromosome" && $runmode ne "Tabulate")
 			}
 		}
 		close (IBS);
-		unlink ("${datadir}/${upload}_${currentComparison}.ibssum");
-		
+		unlink ("${dataDir}/${upload}_${currentComparison}.ibssum");
 	}
 	
 	# Moving BED
 	if (RENAME eq "TRUE")
 	{
-		rename ("${datadir}/${upload}.bed", "${outputdir}/${upload}.bed");
+		rename ("${dataDir}/${upload}.bed", "${outputDir}/${upload}.bed");
 	}
 	else
 	{
-		system("mv ${datadir}/${upload}.bed $outputdir/${upload}.bed");
+		system("mv ${dataDir}/${upload}.bed $outputDir/${upload}.bed");
 	}
 	
-	$pagegenerated = timestamp();
+	$pageGenerated = timestamp();
 	
 	print $cgi->header();
-	
-# print <<HTMLEND;
-# <html>
-# <head>
-# <title>SNPduo Results for $file</title>
 
-# <style type="text/css">
-# table {margin-left:auto;margin-right:auto}
-# tr {text-align:center; vertical-align: middle}
-# th {text-align:center;}
-# body{font-family:verdana,arial,helvetica,sans-serif}
-# </style>
-# </head>
-# <body>
-
-# <p>
-# File uploaded: $file<br>
-# SNPduo Version: $current_revision<br>
-# Analysis started at $starttimestamp<br>
-# Page generated at $pagegenerated
-# </p>
-# HTMLEND
-
-	print("<html>\n<head>\n<title>SNPduo Results for $file</title>\n\n<style type=\"text/css\">\ntable {margin-left:auto;margin-right:auto}\ntr {text-align: center; vertical-align: middle}\nth {text-align: center}\nbody {font-family: verdana, arial, helvetica, sans-serif}\n</style>\n</head>\n<body>\n\n<p>\nFile uploaded: $file\n<br>SNPduo Version: $current_revision\n<br>Analysis started at $starttimestamp\n<br>Page generated at $pagegenerated\n<br>File upload: $uploadTime seconds\n<br>IBS calculation: $ibsTime seconds</p>");
+	print("<html>\n<head>\n<title>SNPduo Results for $file</title>\n\n<style type=\"text/css\">\ntable {margin-left:auto;margin-right:auto}\ntr {text-align: center; vertical-align: middle}\nth {text-align: center}\nbody {font-family: verdana, arial, helvetica, sans-serif}\n</style>\n</head>\n<body>\n\n<p>\nFile uploaded: $file\n<br>SNPduo Version: $current_revision\n<br>Analysis started at $startTimeStamp\n<br>Page generated at $pageGenerated\n<br>File upload: $uploadTime seconds\n<br>IBS calculation: $ibsTime seconds</p>");
 	
 	if ($segmentation eq "TRUE")
 	{
@@ -1094,30 +1011,29 @@ if ($chrom ne "GenomeByChromosome" && $runmode ne "Tabulate")
 		print ("</p>\n");
 	}
 	
-	for ($comparisoncounter = 1; $comparisoncounter <= $comparisonVector; ++$comparisoncounter)
+	for ($comparisonCounter = 1; $comparisonCounter <= $totalNumberOfComparisons; ++$comparisonCounter)
 	{		
-		my $currentComparison = $comparisoncounter;
-		########################################
-		# Make the HTML output
-		########################################
+		my $currentComparison = $comparisonCounter;
+		########################
+		# Make the HTML output #
+		########################
 		
 		print ("<hr>\n\n");
 
-		########################################
-		# Standard output - Genome or Chromosome
-		########################################
-		if ($makepng eq "TRUE" && $makeps eq "TRUE")
+		##########################################
+		# Standard output - Genome or Chromosome #
+		##########################################
+		if ($makePng eq "TRUE" && $makePostscript eq "TRUE")
 		{
 			print("<center><img src=\"$webpage/${outputFolder}/${upload}_${currentComparison}.png\" alt=\"PNG of SNPduo output\"></center>\n<br>");
 			print("<p>Click <a href=\"${webpage}/${outputFolder}/${upload}_${currentComparison}.png\">here (.png)</a> to download the displayed image.<br>\n");
-		
 		}
 		else
 		{
 			print("<p>\n");
 		}
 		
-		if ($makeps eq "TRUE")
+		if ($makePostscript eq "TRUE")
 		{
 			print ("Click <a href=\"${webpage}/${outputFolder}/${upload}_${currentComparison}.ps\">here (.ps)</a> to download the postscript file.<br>\n");
 		}
@@ -1129,8 +1045,7 @@ if ($chrom ne "GenomeByChromosome" && $runmode ne "Tabulate")
 		
 		my $loopcount = 1;
 		
-		#for ($loopcount = 1; $loopcount < 6; ++$loopcount) {
-		for ($loopcount = (1+(5*($currentComparison-1))); $loopcount < (6+(5*($currentComparison-1))); ++$loopcount)
+		for ($loopcount = ( 1  +( 5 * ( $currentComparison - 1 ) ) ); $loopcount < ( 6 + ( 5 * ( $currentComparison - 1 ) ) ); ++$loopcount)
 		{
 			print ("<tr>\n<td>$genos[$loopcount]</td>\n");
 			print ("<td>$sumind1[$loopcount]</td>\n");
@@ -1142,7 +1057,7 @@ if ($chrom ne "GenomeByChromosome" && $runmode ne "Tabulate")
 		print ("<table align=\"center\" border=\"1\" cellpadding=\"3\">\n");
 		print ("<tr>\n<th>Identity by State</th>\n<th>Counts</th>\n</tr>\n\n");
 		
-		for ($loopcount = (2+(4*($currentComparison-1))); $loopcount < (5+(4*($currentComparison-1))); ++$loopcount)
+		for ($loopcount = ( 2 + ( 4 * ( $currentComparison - 1 )) ); $loopcount < ( 5 + ( 4 * ( $currentComparison - 1 ) ) ); ++$loopcount)
 		{
 			print ("<tr>\n<td align=\"center\">$ibs[$loopcount]</td>\n");
 			print ("<td align=\"center\" border=\"1\" cellpadding=\"3\">$count[$loopcount]</td>\n</tr>\n\n");
@@ -1151,7 +1066,6 @@ if ($chrom ne "GenomeByChromosome" && $runmode ne "Tabulate")
 		print ("</table>\n");
 		
 		print ("<br><br>\n");
-		
 	}
 	
 	print("\n</body>\n</html>\n");
@@ -1160,66 +1074,44 @@ if ($chrom ne "GenomeByChromosome" && $runmode ne "Tabulate")
 
 elsif ($chrom eq "GenomeByChromosome" && $runmode ne "Tabulate")
 {	
-	########################################
-	# Grab the list of chromsomes analyzed 
-	# processing of the appropriate files
-	########################################
-	open BATCHLIST, "${datadir}/${upload}_1.chromlist" or error ($cgi,  "Can't open list of chromosomes processed:$!"); 
+	#########################################
+	# Grab the list of chromosomes analyzed #
+	# processing of the appropriate files   #
+	#########################################
+	open BATCHLIST, "${dataDir}/${upload}_1.chromlist" or error ($cgi,  "Can't open list of chromosomes processed:$!"); 
 	
 	@batchchroms = <BATCHLIST>;
 	chomp (@batchchroms);
 	
 	close BATCHLIST;
 
-	########################################
-	# Sort the chromosomes so order makes sense
-	########################################
-	foreach $sorting (@batchchroms)
-	{
-		$sorting =~ s/XY/24/g;
-		$sorting =~ s/X/23/g;
-		$sorting =~ s/Y/25/g;
-		$sorting =~ s/M/26/g;
-	}
+	@batchchroms = SortChromosomeList( @batchchroms );
 	
-	@batchchroms = sort {$a <=> $b} @batchchroms;
-	
-	foreach $sorting (@batchchroms)
-	{
-		$sorting =~ s/24/XY/g;
-		$sorting =~ s/23/X/g;
-		$sorting =~ s/25/Y/g;
-		$sorting =~ s/26/M/g;
-	}
-	
-	for ($comparisoncounter = 1; $comparisoncounter <= $comparisonVector; ++$comparisoncounter)
+	for ($comparisonCounter = 1; $comparisonCounter <= $totalNumberOfComparisons; ++$comparisonCounter)
 	{		
-		my $currentComparison = $comparisoncounter;	
+		my $currentComparison = $comparisonCounter;	
 		########################################
-		#
-		# The next section applies only to the
-		# analysis of the genome by chromosome.
-		#
+		# The next section applies only to the #
+		# analysis of the genome by chromosome #
 		########################################
 		
-		unlink ("${datadir}/${upload}_${currentComparison}.chromlist");
+		unlink ("${dataDir}/${upload}_${currentComparison}.chromlist");
 		
-		########################################
-		# Make some pngs
-		# Move to web directory
-		# Then add to zip file
-		# Remove files
-		########################################
+		#########################
+		# Make some pngs        #
+		# Move to web directory #
+		# Then add to zip file  #
+		# Remove files          #	
+		#########################
 		my $pngwidth = 0;#####PERLMAGICK#####
 		my $pngheight = 0;#####PERLMAGICK#####
 		
-		if ($makepng eq "TRUE" && $makeps eq "TRUE")
+		if ($makePng eq "TRUE" && $makePostscript eq "TRUE")
 		{
 			my $tmpchrom = 0;
 			
 			while (<@batchchroms>)
 			{
-				
 				$tmpchrom = $_;
 				if ($tmpchrom =~ /^\s*(\w*)\s*$/)
 				{
@@ -1234,60 +1126,56 @@ elsif ($chrom eq "GenomeByChromosome" && $runmode ne "Tabulate")
 				
 				if (PERLMAGICK eq "TRUE" && CAIRO eq "FALSE")
 				{
-					PerlMagickConvertPStoPNG ($datadir,$tmpchrom,$currentComparison,$pswidth,$psheight,"TRUE"); #####PERLMAGICK#####
+					PerlMagickConvertPStoPNG ($dataDir,$tmpchrom,$currentComparison,$postscriptWidth,$postscriptHeight,"TRUE"); #####PERLMAGICK#####
 				}
 				elsif (CAIRO eq "FALSE")
 				{
-					CLForkConvertPStoPNG ($datadir,$tmpchrom,$currentComparison,$pswidth,$psheight,"TRUE"); #####NOPERLMAGICK#####
+					CLForkConvertPStoPNG ($dataDir,$tmpchrom,$currentComparison,$postscriptWidth,$postscriptHeight,"TRUE"); #####NOPERLMAGICK#####
 				}
 				
-				##
 				# Move output files to webaccessible directory
-				##
 				if (RENAME eq "TRUE")
 				{
-					rename ("${datadir}/${tmpchrom}_${currentComparison}.ps","${outputdir}/${tmpchrom}_${currentComparison}.ps"); #####RENAME#####
-					rename ("${datadir}/${tmpchrom}_${currentComparison}.png","${outputdir}/${tmpchrom}_${currentComparison}.png"); #####RENAME#####
-					rename ("${datadir}/${tmpchrom}thumb_${currentComparison}.png","${outputdir}/${tmpchrom}thumb_${currentComparison}.png"); #####RENAME#####
+					rename ("${dataDir}/${tmpchrom}_${currentComparison}.ps","${outputDir}/${tmpchrom}_${currentComparison}.ps"); #####RENAME#####
+					rename ("${dataDir}/${tmpchrom}_${currentComparison}.png","${outputDir}/${tmpchrom}_${currentComparison}.png"); #####RENAME#####
+					rename ("${dataDir}/${tmpchrom}thumb_${currentComparison}.png","${outputDir}/${tmpchrom}thumb_${currentComparison}.png"); #####RENAME#####
 				}
 				else
 				{
-					system("mv ${datadir}/${tmpchrom}_${currentComparison}.ps ${outputdir}/${tmpchrom}_${currentComparison}.ps; mv ${datadir}/${tmpchrom}_${currentComparison}.png ${outputdir}/${tmpchrom}_${currentComparison}.png; mv ${datadir}/${tmpchrom}thumb_${currentComparison}.png ${outputdir}/${tmpchrom}thumb_${currentComparison}.png");######NORENAME#####
+					system("mv ${dataDir}/${tmpchrom}_${currentComparison}.ps ${outputDir}/${tmpchrom}_${currentComparison}.ps; mv ${dataDir}/${tmpchrom}_${currentComparison}.png ${outputDir}/${tmpchrom}_${currentComparison}.png; mv ${dataDir}/${tmpchrom}thumb_${currentComparison}.png ${outputDir}/${tmpchrom}thumb_${currentComparison}.png");######NORENAME#####
 				}
 			}
 		} 
 		
-		########################################
-		# Move the summary
-		# Add to the zip file
-		########################################
-#		system ("mv ${datadir}/${upload}.summary.txt $outputdir/$upload.summary.txt; cd $outputdir; zip -q ${upload}.zip ${upload}.summary.txt");######NORENAME#####
+		#######################
+		# Move the summary    #
+		# Add to the zip file #
+		#######################
 		if (RENAME eq "TRUE")
 		{
-			rename ("${datadir}/${upload}_${currentComparison}.summary.txt","${outputdir}/${upload}_${currentComparison}.summary.txt"); #####RENAME#####
+			rename ("${dataDir}/${upload}_${currentComparison}.summary.txt","${outputDir}/${upload}_${currentComparison}.summary.txt"); #####RENAME#####
 		}
 		else
 		{
-			system("mv ${datadir}/${upload}_${currentComparison}.summary.txt ${outputdir}/${upload}_${currentComparison}.summary.txt");
+			system("mv ${dataDir}/${upload}_${currentComparison}.summary.txt ${outputDir}/${upload}_${currentComparison}.summary.txt");
 		}
 	 	
-	 	if ($makepng eq "TRUE" && $makeps eq "TRUE")
+	 	if ($makePng eq "TRUE" && $makePostscript eq "TRUE")
 	 	{
-		 	system ("cd ${outputdir}; zip -q ${upload}_${currentComparison}.zip ${upload}_${currentComparison}.summary.txt ${upload}*_${currentComparison}.ps ${upload}*_${currentComparison}.png");
+		 	system ("cd ${outputDir}; zip -q ${upload}_${currentComparison}.zip ${upload}_${currentComparison}.summary.txt ${upload}*_${currentComparison}.ps ${upload}*_${currentComparison}.png");
 	 	}
-	 	elsif ($makepng eq "FALSE" && $makeps eq "TRUE")
+	 	elsif ($makePng eq "FALSE" && $makePostscript eq "TRUE")
 	 	{
-		 	system ("cd ${outputdir}; zip -q ${upload}_${currentComparison}.zip ${upload}_${currentComparison}.summary.txt  ${upload}*_${currentComparison}.ps");
+		 	system ("cd ${outputDir}; zip -q ${upload}_${currentComparison}.zip ${upload}_${currentComparison}.summary.txt  ${upload}*_${currentComparison}.ps");
 	 	}
 	 	else
 	 	{
-		 	system ("cd ${outputdir}; zip -q ${upload}_${currentComparison}.zip ${upload}_${currentComparison}.summary.txt  ${upload}*_${currentComparison}.ps");
+		 	system ("cd ${outputDir}; zip -q ${upload}_${currentComparison}.zip ${upload}_${currentComparison}.summary.txt  ${upload}*_${currentComparison}.ps");
 	 	}
 	
-		
-		########################################
-		# Pull in summary data
-		########################################
+		########################
+		# Pull in summary data #
+		########################
 		while (<@batchchroms>)
 		{			
 			$tmpchrom = $_;
@@ -1302,7 +1190,7 @@ elsif ($chrom eq "GenomeByChromosome" && $runmode ne "Tabulate")
 			
 			$tmpchrom = $upload ."chr" . $tmpchrom;
 			
-			open GENO, "${datadir}/${tmpchrom}_${currentComparison}.gensum" or error ($cgi,  "Cannot open genotype summary ${tmpchrom}_${currentComparison}.gensum:$!"); 
+			open GENO, "${dataDir}/${tmpchrom}_${currentComparison}.gensum" or error ($cgi,  "Cannot open genotype summary ${tmpchrom}_${currentComparison}.gensum:$!"); 
 					
 			while (<GENO>)
 			{
@@ -1316,9 +1204,9 @@ elsif ($chrom eq "GenomeByChromosome" && $runmode ne "Tabulate")
 				}
 			}
 			close (GENO);
-			unlink ("${datadir}/${tmpchrom}_${currentComparison}.gensum");
+			unlink ("${dataDir}/${tmpchrom}_${currentComparison}.gensum");
 			
-			open IBS, "${datadir}/${tmpchrom}_${currentComparison}.ibssum" or error ($cgi,  "Cannot open IBS summary ${tmpchrom}_${currentComparison}.ibssum:$!"); 
+			open IBS, "${dataDir}/${tmpchrom}_${currentComparison}.ibssum" or error ($cgi,  "Cannot open IBS summary ${tmpchrom}_${currentComparison}.ibssum:$!"); 
 					
 			while (<IBS>)
 			{
@@ -1331,32 +1219,32 @@ elsif ($chrom eq "GenomeByChromosome" && $runmode ne "Tabulate")
 				}
 			}
 			close (IBS);
-			unlink ("${datadir}/${tmpchrom}_${currentComparison}.ibssum");
+			unlink ("${dataDir}/${tmpchrom}_${currentComparison}.ibssum");
 		}
 	}
 	
 	# Moving BED
 	if (RENAME eq "TRUE")
 	{
-		rename ("${datadir}/${upload}.bed", "${outputdir}/${upload}.bed");
+		rename ("${dataDir}/${upload}.bed", "${outputDir}/${upload}.bed");
 	}
 	else
 	{
-		system("mv ${datadir}/${upload}.bed $outputdir/$upload.bed");
+		system("mv ${dataDir}/${upload}.bed $outputDir/$upload.bed");
 	}
 	
-	########################################
-	# Make the HTML output
-	########################################
+	########################
+	# Make the HTML output #
+	########################
 		
-	########################################
-	# Output for GenomeByChromosome
-	########################################
-	$pagegenerated = timestamp();
+	#################################
+	# Output for GenomeByChromosome #
+	#################################
+	$pageGenerated = timestamp();
 	
 	print $cgi->header();
 
-	print "<html>\n<head>\n<title>SNPduo Results for $file</title>\n<style type=\"text/css\">\ntable {margin-left: auto; margin-right: auto}\ntr {text-align: center; vertical-align: middle}\nth {text-align: center}\nbody {font-family: verdana, arial, helvetica, sans-serif}\n</style></head>\n<body>\n\n<p>\nFile uploaded: $file\n<br>SNPduo Version: $current_revision\n<br>Analysis started at $starttimestamp\n<br>Page generated at $pagegenerated\n<br>\nFile upload: $uploadTime seconds\n<br>IBS calculation: $ibsTime seconds</p>";
+	print "<html>\n<head>\n<title>SNPduo Results for $file</title>\n<style type=\"text/css\">\ntable {margin-left: auto; margin-right: auto}\ntr {text-align: center; vertical-align: middle}\nth {text-align: center}\nbody {font-family: verdana, arial, helvetica, sans-serif}\n</style></head>\n<body>\n\n<p>\nFile uploaded: $file\n<br>SNPduo Version: $current_revision\n<br>Analysis started at $startTimeStamp\n<br>Page generated at $pageGenerated\n<br>\nFile upload: $uploadTime seconds\n<br>IBS calculation: $ibsTime seconds</p>";
 	
 	if ($segmentation eq "TRUE")
 	{
@@ -1367,18 +1255,16 @@ elsif ($chrom eq "GenomeByChromosome" && $runmode ne "Tabulate")
 	
 	my $masterOffset = 0;
 	
-	for ($comparisoncounter = 1; $comparisoncounter <= $comparisonVector; ++$comparisoncounter)
+	for ($comparisonCounter = 1; $comparisonCounter <= $totalNumberOfComparisons; ++$comparisonCounter)
 	{		
 		print ("<hr>\n\n");
 		
-		my $currentComparison = $comparisoncounter;
+		my $currentComparison = $comparisonCounter;
 		my $chromCounter = 0;		
 		my $rowcounter = 1;
 		
-		##
 		# Print a table showing reduced images for this format
-		##
-		if ($makepng eq "TRUE")
+		if ($makePng eq "TRUE")
 		{
 			print "<center><table>\n<tr><th colspan=\"12\">Chromosome Images</th></tr>\n\n<tr>";
 			
@@ -1420,14 +1306,11 @@ elsif ($chrom eq "GenomeByChromosome" && $runmode ne "Tabulate")
 			print "</tr></table></center>\n\n";
 		}
 		
-		##
 		# Show the download links
-		##
 		print "<p><br>\n\n";
 		print "Click <a href=\"${webpage}/${outputFolder}/${upload}_${currentComparison}.summary.txt\">here (.txt)</a> to download the text summary.<br>\n";
 		print "Click <a href=\"${webpage}/${outputFolder}/${upload}_${currentComparison}.zip\">here (.zip)</a> to download a zip file containing the summary file and any generated images.";
 		print "</p>\n\n";
-		
 		print "<table align=\"center\" border=\"1\" cellpadding=\"3\">\n";
 		print "<tr><th rowspan=\"2\">Chromosome</th>\n";
 		print "<th colspan=\"4\">$sumind1[1+(5*$masterOffset)]</th>\n";
@@ -1496,70 +1379,51 @@ elsif ($chrom eq "GenomeByChromosome" && $runmode ne "Tabulate")
 elsif ($runmode eq "Tabulate")
 {
 	########################################
-	# Grab the list of chromsomes analyzed 
-	# processing of the appropriate files
+	# Grab the list of chromsomes analyzed #
+	# processing of the appropriate files  #
 	########################################
-	open BATCHLIST, "${datadir}/${upload}.chromlist" or error ($cgi,  "Can't open list of chromosomes processed:$!"); 
+	open BATCHLIST, "${dataDir}/${upload}.chromlist" or error ($cgi,  "Can't open list of chromosomes processed:$!"); 
 	
 	@batchchroms = <BATCHLIST>;
 	chomp (@batchchroms);
 	
 	close BATCHLIST;
-	unlink ("${datadir}/${upload}.chromlist");
+	unlink ("${dataDir}/${upload}.chromlist");
 
-	########################################
-	# Sort the chromosomes so order makes sense
-	########################################
-	foreach $sorting (@batchchroms)
-	{
-		$sorting =~ s/XY/24/g;
-		$sorting =~ s/X/23/g;
-		$sorting =~ s/Y/25/g;
-		$sorting =~ s/M/26/g;
-	}
-	
-	@batchchroms = sort {$a <=> $b} @batchchroms;
-	
-	foreach $sorting (@batchchroms)
-	{
-		$sorting =~ s/24/XY/g;
-		$sorting =~ s/23/X/g;
-		$sorting =~ s/25/Y/g;
-		$sorting =~ s/26/M/g;
-	}
+	@batchchroms = SortChromosomeList( @batchchroms );
 	
 	########################################
 	# Move the ibs and genotype summary files
 	########################################
 	if (RENAME eq "TRUE")
 	{
-		rename ("${datadir}/${upload}.SummaryIBS.csv","${outputdir}/${upload}.SummaryIBS.csv");
-		rename ("${datadir}/${upload}.SummaryGenotype.csv","${outputdir}/${upload}.SummaryGenotype.csv");
-		rename ("${datadir}/${upload}.SummaryMeanSD.csv", "${outputdir}/${upload}.SummaryMeanSD.csv");
+		rename ("${dataDir}/${upload}.SummaryIBS.csv","${outputDir}/${upload}.SummaryIBS.csv");
+		rename ("${dataDir}/${upload}.SummaryGenotype.csv","${outputDir}/${upload}.SummaryGenotype.csv");
+		rename ("${dataDir}/${upload}.SummaryMeanSD.csv", "${outputDir}/${upload}.SummaryMeanSD.csv");
 	}
 	else
 	{
-		system ("mv ${datadir}/${upload}.SummaryIBS.csv ${outputdir}/${upload}.SummaryIBS.csv; mv ${datadir}/${upload}.SummaryGenotype.csv ${outputdir}/${upload}.SummaryGenotype.csv; mv ${datadir}/${upload}.SummaryMeanSD.csv ${outputdir}/${upload}.SummaryMeanSD.csv");
+		system ("mv ${dataDir}/${upload}.SummaryIBS.csv ${outputDir}/${upload}.SummaryIBS.csv; mv ${dataDir}/${upload}.SummaryGenotype.csv ${outputDir}/${upload}.SummaryGenotype.csv; mv ${dataDir}/${upload}.SummaryMeanSD.csv ${outputDir}/${upload}.SummaryMeanSD.csv");
 	}
 	
-	########################################
-	# Make the HTML output
-	########################################
+	########################
+	# Make the HTML output #
+	########################
 		
-	########################################
-	# Output for GenomeByChromosome
-	########################################
-	$pagegenerated = timestamp();
+	#################################
+	# Output for GenomeByChromosome #
+	#################################
+	$pageGenerated = timestamp();
 	
-	########################################
-	# HTML header and initial text
-	########################################
+	################################
+	# HTML header and initial text #
+	################################
 	print $cgi->header();
-	print "<html>\n<head>\n<title>SNPduo Results for $file</title>\n<style type=\"text/css\">\ntable {margin-left: auto; margin-right: auto}\ntr {text-align: center; vertical-align: middle}\nth {text-align: center}\nbody {font-family: verdana, arial, helvetica, sans-serif}\n</style></head>\n<body>\n\n<p>\nFile uploaded: $file\n<br>SNPduo Version: $current_revision\n<br>Analysis started at $starttimestamp\n<br>Page generated at $pagegenerated\n<br>\nFile upload: $uploadTime seconds\n<br>IBS calculation: $ibsTime seconds</p>";
+	print "<html>\n<head>\n<title>SNPduo Results for $file</title>\n<style type=\"text/css\">\ntable {margin-left: auto; margin-right: auto}\ntr {text-align: center; vertical-align: middle}\nth {text-align: center}\nbody {font-family: verdana, arial, helvetica, sans-serif}\n</style></head>\n<body>\n\n<p>\nFile uploaded: $file\n<br>SNPduo Version: $current_revision\n<br>Analysis started at $startTimeStamp\n<br>Page generated at $pageGenerated\n<br>\nFile upload: $uploadTime seconds\n<br>IBS calculation: $ibsTime seconds</p>";
 	
-	########################################
-	# horizontal break and links
-	########################################	
+	##############################
+	# horizontal break and links #
+	##############################
 	print "<hr>\n\n";
 	print "<p><br>\n\n";
 	print "Click <a href=\"${webpage}/${outputFolder}/${upload}.SummaryGenotype.csv\">here (.csv)</a> to download the Genotype summary.<br>\n";
@@ -1567,9 +1431,9 @@ elsif ($runmode eq "Tabulate")
 	print "Click <a href=\"${webpage}/${outputFolder}/${upload}.SummaryMeanSD.csv\">here (.csv)</a> to download the Autosomal Mean / SD summary.<br>\n";
 	print "</p>\n\n";
 	
-	########################################
-	# Print Genotype summary table
-	########################################	
+	################################
+	# Print Genotype summary table #
+	################################
 	print "<table align=\"center\" border=\"1\" cellpadding=\"3\">\n";
 	print "<tr><th rowspan=\"2\">Samples</th>\n";
 	
@@ -1591,12 +1455,12 @@ elsif ($runmode eq "Tabulate")
 		print "<th>NC</th>\n";
 	}
 	
-	########################################
-	# Print genotype data row by row
-	########################################
+	##################################
+	# Print genotype data row by row #
+	##################################
 	my $prevSample = "NULLVALUENOPREVIOUSVALUE";
 	
-	open GENO, "${outputdir}/${upload}.SummaryGenotype.csv" or error ($cgi, "Couldn't open genotype summary file :$!");
+	open GENO, "${outputDir}/${upload}.SummaryGenotype.csv" or error ($cgi, "Couldn't open genotype summary file :$!");
 	my $trash = <GENO>;
 	
 	while (<GENO>)
@@ -1618,9 +1482,9 @@ elsif ($runmode eq "Tabulate")
 	print "</table>\n\n";
 	close GENO;
 	
-	########################################
-	# Print IBS summary table
-	########################################
+	###########################
+	# Print IBS summary table #
+	###########################
 	print "<br><br>\n\n<table align=\"center\" border=\"1\" cellpadding=\"3\">\n";
 	print "<tr><th rowspan=\"2\">Sample A</th>\n";
 	print "<th rowspan=\"2\">Sample B</th>\n";
@@ -1643,13 +1507,13 @@ elsif ($runmode eq "Tabulate")
 		print "<th>IBS2</th>\n";
 	}
 	
-	########################################
-	# Print IBS data row by row
-	########################################
+	#############################
+	# Print IBS data row by row #
+	#############################
 	my $prevSampleA = "NULLVALUENOPREVIOUSVALUE";
 	my $prevSampleB = "NULLVALUENOPREVIOUSVALUE";
 	
-	open IBS, "${outputdir}/${upload}.SummaryIBS.csv" or error ($cgi, "Couldn't open IBS summary file :$!");
+	open IBS, "${outputDir}/${upload}.SummaryIBS.csv" or error ($cgi, "Couldn't open IBS summary file :$!");
 	$trash = <IBS>;
 	
 	while (<IBS>)
@@ -1672,9 +1536,9 @@ elsif ($runmode eq "Tabulate")
 	print "</table>\n\n";
 	close IBS;
 	
-	########################################
-	# Print Mean SD summary table
-	########################################
+	###############################
+	# Print Mean SD summary table #
+	###############################
 	print "<br><br>\n\n<table align=\"center\" border=\"1\" cellpadding=\"3\">\n";
 	print "<tr><th>Sample A</th>\n";
 	print "<th>Sample B</th>\n";
@@ -1682,10 +1546,10 @@ elsif ($runmode eq "Tabulate")
 	print "<th>SD IBS</th>\n";
 	print "</tr>\n";
 	
-	########################################
-	# Print Mean / SD data row by row
-	########################################
-	open MEANSD, "${outputdir}/${upload}.SummaryMeanSD.csv" or error ($cgi, "Couldn't open Mean/SD summary file :$!");
+	###################################
+	# Print Mean / SD data row by row #
+	###################################
+	open MEANSD, "${outputDir}/${upload}.SummaryMeanSD.csv" or error ($cgi, "Couldn't open Mean/SD summary file :$!");
 	$trash = <MEANSD>;
 	
 	while (<MEANSD>)
@@ -1700,16 +1564,15 @@ elsif ($runmode eq "Tabulate")
 	print "</table>\n\n";
 	
 	close MEANSD;
-	########################################
-	# Close remaining tags
-	########################################
+	########################
+	# Close remaining tags #
+	########################
 	print "</body>\n</html>";
 }
 
-########################################
-# Subroutine for reporting errors
-########################################
-
+##################################
+# Subroutine for error reporting #
+##################################
 sub error
 {
 	my ($out, $message) = @_;
@@ -1723,10 +1586,9 @@ sub error
 	exit 1;
 }
 
-########################################
-# Subroutine for timestamping runs
-########################################
-
+####################################
+# Subroutine for timestamping runs #
+####################################
 sub timestamp
 {
 	my @months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
@@ -1751,20 +1613,20 @@ sub timestamp
 	return ($theTime);
 }
 
-########################################
-# Subroutine for generating custom R scripts
-########################################
-
+##############################################
+# Subroutine for generating custom R scripts #
+##############################################
 sub WriteRTemplate
 {
-	my ($codeDir, $dataDir, $Platform, $uploadName, $chromName, $chromListObjects, $RcomparisonVector,
-	$compiledDir,$rowCounts,$psWidth,$psHeight,$Build,$ComparisonVector,$Delimiter,$Makeps, $RunMode, $BEDMode) = @_;
+	my ( $codeDir, $dataDir, $uploadName, $chromName, $chromListObjects, $RcomparisonVector,
+	$compiledDir,$rowCounts,$psWidth,$psHeight,$Build,$ComparisonVector,$Delimiter,$Makeps, $RunMode, $BEDMode, $skipValue ) = @_;
 	
-	open TEMPLATE, "${codeDir}/${Platform}.R" or error ($cgi, "Cannot open $Platform template: $!");
-	open R_CODE, ">${dataDir}/${uploadName}.R" or error ($cgi, "Cannot make custom R code for $Platform: $!");
+	open TEMPLATE, "${codeDir}/snpduo_code_template.R" or error ( $cgi, "Cannot open snpduo_code_template: $!" );
+	open R_CODE, ">${dataDir}/${uploadName}.R" or error ( $cgi, "Cannot make custom R code: $!" );
 	
 	while (<TEMPLATE>)
 	{
+		s/SKIP_HOLDER/$skipValue/g;
 		s/UPLOAD_HOLDER/$uploadName/g;
 		s/CHR_HOLDER/$chromName/g;
 		s/CHR_LIST/$chromListObjects/g;
@@ -1797,28 +1659,28 @@ sub WriteRTemplate
 }
 
 ########################################
-# Subroutine for creating images using
-# the PerlMagick Module
+# Subroutine for creating images using #
+# the PerlMagick Module                #
 ########################################
-sub PerlMagickConvertPStoPNG
-{
-	
-	my ($dataDir,$uploadName,$currentName,$psWidth,$psHeight,$Thumbnail) = @_;
-	
-	my $imageCMD = Image::Magick->new;
-	my $image = $imageCMD->Read("${dataDir}/${uploadName}_${currentName}.ps");
-	$image = $imageCMD->Rotate(degrees=>90);
-	my $pngwidth = int($psWidth*72);
-	my $pngheight = int($psHeight*72);
-	$image = $imageCMD->Resize(geometry=>"${pngwidth}x${pngheight}");
-#	$image = $imageCMD->Resize(geometry=>"$pngwidth x $pngheight", filter=>"Blackman"); # Doesn't work for genome for some reason
-#	$image = $imageCMD->Sharpen(2);
-	$image = $imageCMD->Write("${dataDir}/${uploadName}_${currentName}.png");
-	
-	if( $Thumbnail eq "TRUE" )
+if ( PERLMAGICK eq "TRUE" ) {
+	sub PerlMagickConvertPStoPNG
 	{
-		$image = $imageCMD->Resize(geometry=>"124x96");
-		$image = $imageCMD->Write("${dataDir}/${uploadName}thumb_${currentName}.png");
+		
+		my ($dataDir,$uploadName,$currentName,$psWidth,$psHeight,$Thumbnail) = @_;
+		
+		my $imageCMD = Image::Magick->new;
+		my $image = $imageCMD->Read("${dataDir}/${uploadName}_${currentName}.ps");
+		$image = $imageCMD->Rotate(degrees=>90);
+		my $pngwidth = int($psWidth*72);
+		my $pngheight = int($psHeight*72);
+		$image = $imageCMD->Resize(geometry=>"${pngwidth}x${pngheight}");
+		$image = $imageCMD->Write("${dataDir}/${uploadName}_${currentName}.png");
+		
+		if( $Thumbnail eq "TRUE" )
+		{
+			$image = $imageCMD->Resize(geometry=>"124x96");
+			$image = $imageCMD->Write("${dataDir}/${uploadName}thumb_${currentName}.png");
+		}
 	}
 }
 
@@ -1842,12 +1704,20 @@ sub CLForkConvertPStoPNG
 	}
 }
 
-########################################
-# Subroutine for checking directory sizes
-########################################
+###########################################
+# Subroutine for checking directory sizes #
+###########################################
 sub DirectoryCheck
 {
 	my ($uploadDir, $outputDir) = @_;
+	
+	if ( $uploadDir eq '/' || $uploadDir eq "/home" || $uploadDir eq "/home/" ) {
+		error( "WHOA! uploadDir is a BAD choice! You could frag your whole drive." );
+	}
+	
+	if ( $outputDir eq "/" || $outputDir eq "/home" || $uploadDir eq "/home/" ) {
+		error( "WHOA! outputDir is a BAD choice! You could frag important data!!!" );
+	}
 	
 	my $uploadDirSize = `du -c $uploadDir | grep total`;
 	$uploadDirSize =~ s/^\s*(\d+)\s*total.*$/$1/e;
@@ -1860,12 +1730,21 @@ sub DirectoryCheck
 	}
 }
 
-########################################
-# Subroutine for cleaning full directories
-########################################
+############################################
+# Subroutine for cleaning full directories #
+############################################
 sub DirectoryClean
 {
 	my ($uploadDirectory, $outputDirectory) = @_;
+	
+	if ( $uploadDir eq '/' || $uploadDir eq "/home" || $uploadDir eq "/home/" ) {
+		error( "WHOA! uploadDir is a BAD choice! You could frag your whole drive." );
+	}
+	
+	if ( $outputDir eq "/" || $outputDir eq "/home" || $uploadDir eq "/home/" ) {
+		error( "WHOA! outputDir is a BAD choice! You could frag important data!!!" );
+	}
+	
 	my $round = 1;
 	my $dirClean = 0;
 	
@@ -1969,4 +1848,56 @@ sub DirectoryClean
 		error($cgi, "Upload or output directory full and script was unable to clean it. Please contact the webmaster.")
 		;
 	}
+}
+
+#####################################################
+# Subroutine for correctly sorting chromosome order #
+#####################################################
+sub SortChromosomeList
+{
+	#############################################
+	# Sort the chromosomes so order makes sense #
+	#############################################
+	my $mitoChar = "NULL";
+	
+	my @chromsToSort = @_;
+	
+	foreach $sorting (@chromsToSort)
+	{
+		$sorting =~ s/XY/24/g;
+		$sorting =~ s/X/23/g;
+		$sorting =~ s/Y/25/g;
+		
+		if ( $sorting =~ /MITO/g ) {
+			$sorting =~ s/MITO/26/g;
+			$mitoChar = "MITO";
+		}
+		
+		elsif ( $sorting =~ /Mito/g ) {
+			$sorting =~ s/Mito/26/g;
+			$mitoChar = "Mito";
+		}
+		
+		elsif ( $sorting =~ /MT/g ) {
+			$sorting =~ s/MT/26/g;
+			$mitoChar = "MT";
+		}
+		
+		elsif ( $sorting =~ /M/g ) {
+			$sorting =~ s/M/26/g;
+			$mitoChar = "M";
+		}
+	}
+	
+	@chromsToSort = sort {$a <=> $b} @chromsToSort;
+	
+	foreach $sorting (@chromsToSort)
+	{
+		$sorting =~ s/24/XY/g;
+		$sorting =~ s/23/X/g;
+		$sorting =~ s/25/Y/g;
+		$sorting =~ s/26/${mitoChar}/g;
+	}
+	
+	return( @chromsToSort );
 }

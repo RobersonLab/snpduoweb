@@ -1,31 +1,9 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<!--
-########################################
-#  Copyright (c)  2007-2008 Elisha Roberson and Jonathan Pevsner.
-#                 All Rights Reserved.
-#
-#  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS "AS IS" AND ANY 
-#  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-#  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR 
-#  PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNERS BE
-#  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-#  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-#  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-#  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-#  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-#  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-#  POSSIBILITY OF SUCH DAMAGE. THIS SOFTWARE IS FREE FOR PERSONAL OR ACADEMIC
-#  USE. THE SOFTWARE MAY NOT BE USED COMMERCIALLY WITHOUT THE EXPRESS, WRITTEN
-#  PERMISSION OF THE COPYRIGHT HOLDERS. ALL ACTIONS OR PROCEEDINGS RELATED TO 
-#  THIS SOFTWARE SHALL BE TRIED EXCLUSIVELY IN THE STATE AND FEDERAL COURTS 
-#  LOCATED IN THE COUNTY OF BALTIMORE CITY, MARYLAND. USE OF THIS SOFTWARE
-#  IMPLIES ACCEPTANCE OF THIS CONTRACT.
-########################################
--->
+
 <html>
 
 <head>
-<title>SNPduoWeb at the Pevsnerlab -- Tutorial</title>
+<title>SNPduoWeb -- Tutorial</title>
 <link rel="stylesheet" type="text/css" href="SNPduo.css">
 <meta name="author" content="Elisha Roberson">
 <meta name="description" content="A tutorial explaining the preparation of data for SNPduoWeb and how to run the tool">
@@ -33,37 +11,6 @@
 </head>
 
 <body>
-<!-- <a name="top"></a> -->
-<!-- ################################  Insert header elements similar to the rest of the site  ################################ -->
-<table class="headertables"> 
-<tr>
-<td>
-<img src="images/SNPduo_titlegraphic.jpg" width="600" height="90" alt="Pevsner Lab Header Picture">
-</td>
-</tr>
-</table>
-
-<table class="headertables">
-<tr>
-<td class="menu">
-<a href="/index.html">Home</a> | 
-<a href="/dragon.htm">DRAGON</a> | 
-<a href="/snomad.htm">SNOMAD</a> | 
-<a href="/snpscan.htm">SNPscan</a> | 
-<a href="/SNPtrio.htm">SNPtrio</a> | 
-<a href="/bioinformatics/bioinf.htm">Bioinformatics</a> | 
-<a href="/bioinfo_course.htm">Bioinformatics Course</a> | 
-<a href="/microarraydata/index.html">Microarrays</a> | 
-<a href="/lead.htm">Lead Poisoning</a><br>
-<a href="/autism_rett.htm">Autism and Rett Syndrome</a> | 
-<a href="/index_ds.htm">Down Syndrome</a> | 
-<a href="http://www.davinciandthebrain.org">Leonardo da Vinci</a> | 
-<a href="/publications.htm">Publications</a> | 
-<a href="/contact.htm">Lab Personnel &amp; Contact Info</a>
-</td>
-</tr>
-</table>
-<!-- ################################  End header elements  ################################ -->
 <p><a name="top"></a></p>
 
 <table width="100%" border="0" cellpadding="0" cellspacing="0">
@@ -105,7 +52,6 @@ Jump to a tutorial<br><br>
 <a name="Affymetrix"><strong>Affymetrix CNAT 4.0 Data</strong></a>
 <br><br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Affymetrix data files are typically analyzed using the GeneChip Genotyping Analysis Software. This tutorial was written based on version 4.1.0.26, but should be applicable to older versions as well.
-
 
 <blockquote>
 	<p>
@@ -401,7 +347,7 @@ Jump to a tutorial<br><br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SNPduoWeb is designed to ignore lines that start with a # character (commented lines). Any line that contains this character is automatically ignored. Also, in any context OTHER than commenting out a line the # sign is a forbidden character and will automatically be replaced by alternative characters.
 <br><br>
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;If you need to manually edit any header information of large text files on a Windows PC, we suggest using a more advanced text/code editor than notepad, such as <a href="http://www.crimsoneditor.com">Crimson Editor</a> or <a href="http://notepad-plus.sourceforge.net">Notepad++</a>. Mac and Linux text editors such as vi, emacs, and xemacs can usually open and manipulate large files with little problem.
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;If you need to manually edit any header information of large text files on a Windows PC, we suggest using a more advanced text/code editor than notepad, such as <a href="http://www.crimsoneditor.com">Crimson Editor</a> or <a href="http://notepad-plus.sourceforge.net">Notepad++</a>. Mac and Linux text editors such as vim and emacs can usually open and manipulate large files with little problem.
 <br><br>
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;If performing a "Genome" plot, it may be useful to keep the height at approximately normal landscape page size (approximately 8.5") and set the width to very long (for example 50). This will spread the plot out enough to more easily see patterns in your data.
@@ -410,25 +356,13 @@ Jump to a tutorial<br><br>
 <br><br>
 <a href="#top">top</a>
 </p>
-<!-- ################################  A navigation footer not needed for distribution code  ################################ -->
 
 <table width="100%" border="0" cellpadding="6" cellspacing="3">
 <tr class="rowcommon">
 <td class="cell1 navcell1"><a href="index.html" class="navtext">Back</a></td>
 <td class="cell2 navcell2">Return to the SNPduoWeb homepage</td>
 </tr>
-
-<tr class="rowcommon">
-<td class="cell1 navcell1"><a href="/index.html" class="navtext">Home</a></td>
-<td class="cell2 navcell2">Return to the Pevsner Lab Homepage</td>
-</tr>
-
 </table>
-
-<p>
-<img src="images/valid-html401-blue.png" alt="Valid HTML 4.01 Strict!" height="31" width="88">
-<img src="images/vcss-blue.png" alt="Valid CSS!">
-</p>
 
 </body>
 </html>
