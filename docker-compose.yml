@@ -1,0 +1,13 @@
+version: "3"
+services:
+  snpduoweb:
+    container_name: snpduoweb
+    image: thatdnaguy/snpduoweb:latest
+    ports:
+      - "80:80/tcp"
+    environment:
+      TZ: 'America/Chicago'
+    volumes:
+      - './download_dir:/var/www/html/snpduo/tool_output'
+      - './upload_dir:/data/snpduo_uploads'
+    restart: unless-stopped

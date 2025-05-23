@@ -1,9 +1,28 @@
-snpduoweb
-=========
+# snpduoweb
 
-Repository for the web-based version / visualization engine for the [SNPduoWeb tool](http://pevsnerlab.kennedykrieger.org/SNPduo). Designed to visualize identity-by-state in high-density snp data. Originally developed in the lab of [Dr. Jonathan Pevsner](http://www.kennedykrieger.org/patient-care/faculty-staff/jonathan-pevsner) at the Kennedy Krieger Institute in Baltimore. Publication PMID: [19696932](http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0006711).
+Repository for the web-based version / visualization engine for the SNPduoWeb tool. It was designed to visualize identity-by-state in high-density SNP data. SNPduoWeb was originally developed in the lab of Dr. Jonathan Pevsner while at the Kennedy Krieger Institute in Baltimore.
 
-## Installing SNPduo Web
+Publication PMID: [19696932](http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0006711).
+
+The hosting servers for this web tool have since been decommissioned. Instead, we now include instructions on how to run your own server using Docker compose.
+
+## Running SNPduoWeb on your own server
+1. Create a directory to hold the file data for SNPduoWeb. Example: `mkdir /data/snpduoweb`.
+2. Download the docker-compose.yml file from this repository into the directory you made for SNPduoWeb.
+3. Navigate to the SNPduoWeb directory on your server. `cd /data/snpduoweb`
+4. Edit the yml if you already have a service running on port 80. Example: change the yml from - "80:80/tcp" to - "3000:80/tcp" to run the service on port 3000 on the local machine (forwarded to port 80 in the image).
+5. Run the compose in that folder: `docker-compose up`
+6. Reach SNPduoWeb by going to http://MACHINEIP:PORT/snpduoweb in your browser.
+
+If the service is running on port 80, the port isn't required.
+
+**Hint 1**: It doesn't work! Make sure the persistent volumes have the right file permissions to let the docker image read and write.
+
+**Hint 2**: No SSL?!?! Not in this image. If you need SSL protection, I'd probably recommend running an nginx reverse proxy to the ports instead of mucking with the image and trying to install the certificates.
+
+**Hint 3**: My data timed out! The built-in apache time limits may be too short. You can try mucking with the Docker file to alter the configuration for Apache. Or prefilter your file to make sure you only are including data you want to test to reduce upload and processing time.
+
+## Installing SNPduoWeb - the fragile old-fashioned way
 Installing the web-interfaced version of SNPduo is relatively straightforward, with minimal requirements:
 
 * Linux based OS
@@ -100,7 +119,7 @@ my $datadir = "/data/snpduo_uploads";
 my $outputdir = "/var/www/html/snpduo/tool_output";
 my $webpage = "http://www.mydomain.com/snpduo";
 my $outputFolder = "tool_output"; # which turns into http://www.mydomain.com/snpduo/tool_output for serving result files
-my $codedir = "/usr/lib/cgi-bin/snpduo"; 
+my $codedir = "/usr/lib/cgi-bin/snpduo";
 my $compileddir = "/usr/lib/cgi-bin/snpduo";
 my $pathtoR = "/usr/bin/R";
 use constant FILE_MAX => 1024 * 1024 * 500;
