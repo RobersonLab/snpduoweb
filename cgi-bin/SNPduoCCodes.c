@@ -106,24 +106,6 @@ void CountGenotypes (int *size, int *geno, int *NC, int *AA, int *AB, int *BB)
 				++BB[0];
 				break;
 		}
-		/*
-		if(geno[i] == 1)
-		{
-			++AA[0];
-		}
-		else if (geno[i] == 3)
-		{
-			++BB[0];
-		}
-		else if (geno[i] == 2)
-		{
-			++AB[0];
-		}
-		else if (geno[i] == 0)
-		{
-			++NC[0];
-		}
-		*/
 	}
 }
 
@@ -136,17 +118,17 @@ void SummarizeIBS (int *size, int *ibsvector, int *ibs0count, int *ibs1count, in
 	unsigned int i=0;
 	for (i = 0; i < size[0]; ++i)
 	{
-		if(ibsvector[i] == 2)
+		switch( ibsvector[i] )
 		{
-			++ibs2count[0];
-		}
-		else if (ibsvector[i] == 1)
-		{
-			++ibs1count[0];
-		}
-		else if (ibsvector[i] == 0)
-		{
-			++ibs0count[0];
+			case 0:
+				++ibs0count[0];
+				break;
+			case 1:
+				++ibs1count[0];
+				break;
+			case 2:
+				++ibs2count[0];
+				break;
 		}
 	}
 }
