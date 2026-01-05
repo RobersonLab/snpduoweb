@@ -12,22 +12,13 @@
 ###########################################
 load_chromosome_features = function( compiled, genomebuild )
 {	
-	##############################################
-	# Load appropriate genomic feature locations #
-	##############################################
-	if ( genomebuild == "v34" ) {
-		load( file.path( compiled, "v34cytoband.Rbin" ) )
-	} else if ( genomebuild == "v35" )
-	{
-		load( file.path( compiled, "v35cytoband.Rbin" ) )
-	} else if ( genomebuild == "v36" )
-	{
-		load( file.path( compiled, "v36.1cytoband.Rbin" ) )
-	} else if ( genomebuild == "vGRCh37" )
-	{
-		load( file.path( compiled, "vGRCh37cytoband.Rbin" ) )
-	} else
-	{
+  
+  build_file = paste0( genomebuild, 'cytoband.Rbin' )
+  build_path = file.path( compiled, build_file )
+  
+  if ( file.exists( build_path ) ) {
+    load( file = build_path )
+  } else {
 		stop( paste( "The indicated genome build", genomebuild, "was not found. Please try again.\n" ) )
 	}
 	
@@ -49,6 +40,7 @@ load_chromosome_features = function( compiled, genomebuild )
 load_chromosome_position_offsets = function( compiled, genomebuild )
 {
 	# This only gives offset for 1-22 and X/Y. Line 25 is the TOTAL genome size for giving the x plot size
+  # ATTN is this true with the updated offsets? chrM could be included.
 	load( file.path( compiled, "offsets.Rbin" ) )
 	
 	if ( !exists( "offsets" ) )
@@ -328,8 +320,7 @@ chrom_convert_to_integer = function( charChromosomes )
 		
 		charChromosomes[charChromosomes == "X"] = 23
 		charChromosomes[charChromosomes == "Y"] = 24
-		charChromosomes[charChromosomes == "XY"] = 25
-		charChromosomes[charChromosomes %in% c( "M", "MITO", "MT", "Mito" )] = 26
+		charChromosomes[charChromosomes %in% c( "M", "MITO", "MT", "Mito" )] = 25
 		
 		return( as.integer( charChromosomes ) )
 	} else 
