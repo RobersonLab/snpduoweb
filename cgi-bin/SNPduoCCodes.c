@@ -64,16 +64,11 @@ void FastIBS (int *size, int *geno1, int *geno2, int *ibs)
 			else if (currgeno1 == 2)
 			{
 				/*AB*/
-				if(currgeno2 == 1)
-				{
-					/*AA*/
-					ibs[i] = 1;
-				}
-				else if (currgeno2 == 3)
-				{
-					/*BB*/
-					ibs[i] = 1;
-				}
+				/* we can shortcut here. */
+				/* if genotype 1 is AB, and we've already established */
+				/* that neither individual is missing (0) and */
+				/* that the two genotypes aren't equal, IBS1 is the only choice */
+				ibs[i] = 1
 			}
 		}
 	}
