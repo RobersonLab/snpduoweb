@@ -91,6 +91,22 @@ void CountGenotypes (int *size, int *geno, int *NC, int *AA, int *AB, int *BB)
 	
 	for (i = 0; i < size[0]; ++i)
 	{
+		switch( geno[i] )
+		{
+			case 0:
+				++NC[0];
+				break;
+			case 1:
+				++AA[0];
+				break;
+			case 2:
+				++AB[0];
+				break;
+			case 3:
+				++BB[0];
+				break;
+		}
+		/*
 		if(geno[i] == 1)
 		{
 			++AA[0];
@@ -107,6 +123,7 @@ void CountGenotypes (int *size, int *geno, int *NC, int *AA, int *AB, int *BB)
 		{
 			++NC[0];
 		}
+		*/
 	}
 }
 
