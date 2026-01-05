@@ -1,10 +1,11 @@
 #!/usr/bin/perl -wT
 
-##################################
-#	SNPduo.cgi                   #
-#	Author: Eli Roberson         #
-#	Created: September 04, 2007  #
-##################################
+###############################
+# SNPduo.cgi                  #
+# Author: Eli Roberson        #
+# Created: September 04, 2007 #
+# Edited: January 5, 2026     #
+###############################
 
 use constant RENAME => "TRUE";
 # Rename can be used if the upload and output directories
@@ -53,18 +54,18 @@ my $pathtoR = "/usr/bin/R";
 ################################
 # Set file and directory sizes #
 ################################
-use constant FILE_MAX => 1024 * 1024 * 500;
-#500Mb upload limit
+use constant FILE_MAX => 1024 * 1024 * 5000;
+# upload limit - increased to 5 GB
 
-use constant DIR_MAX => 1024 * 1024 * 5; 
-# Max 5Gb upload directory. Third number is number GB.
+use constant DIR_MAX => 1024 * 1024 * 50; 
+# Max 50 Gb upload directory. Third number is number GB.
 # Notice there are only 1024 * 1024, instead of three multiplies.
 # This differs from FILE_MAX since it uses `du -c` output. That
 # utility reports KB of file space (neglecting the need for 
 # using 1024*1024*1024*
 
-use constant OUTPUT_MAX => 1024 * 1024 * 5;
-#Max 5Gb of output stored in output directory. Same explain as DIR_MAX
+use constant OUTPUT_MAX => 1024 * 1024 * 50;
+#Max 50 Gb of output stored in output directory. Same explain as DIR_MAX
 
 ##############################################################
 # WARNING!!!!!!!!!!!!!!                                      #
