@@ -195,16 +195,9 @@ void CountIBSFromGenotypes (int *size, int *geno1, int *geno2, int *ibs0, int *i
 			else if (currGeno1 == 2)
 			{
 				/* AB */
-				if(currGeno2 == 1)
-				{
-					/* AA */
-					++ibs1[0];
-				}
-				else if (currGeno2 == 3)
-				{
-					/* BB */
-					++ibs1[0];
-				}
+				/* As above, don't worry about comparing to individual 2's genotype */
+				/* just incr the ibs1 count */
+				++ibs1[0];
 			}
 		}
 	}
