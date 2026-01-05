@@ -129,6 +129,8 @@ void SummarizeIBS (int *size, int *ibsvector, int *ibs0count, int *ibs1count, in
 			case 2:
 				++ibs2count[0];
 				break;
+			default:
+				break; // handling the edge case where there is a non 0-2 IBS value
 		}
 	}
 }
