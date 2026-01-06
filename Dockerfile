@@ -1,7 +1,7 @@
 ###########################
 # SNPduo web image        #
 # Author: Elisha Roberson #
-# Edited: 2025-02-10      #
+# Edited: 2026-01-05      #
 ###########################
 
 # R portion of install adapted from other sources
@@ -13,6 +13,12 @@
 # Built from official httpd image
 
 FROM ubuntu:noble-20250127
+
+#################
+# what version? #
+#################
+# this must be a tag from the git repo
+ARG TAG=v1.5.0
 
 ###########
 # setup R #
@@ -93,20 +99,20 @@ RUN ln -s /usr/lib/x86_64-linux-gnu/openblas/libblas.so.3 /usr/lib/blas.so && \
 RUN mkdir -p /var/www/html/snpduo/tool_output && \
     mkdir -p /usr/lib/cgi-bin/snpduo && \
     mkdir -p /data/snpduo_uploads && \
-    wget https://github.com/RobersonLab/snpduoweb/archive/refs/tags/v1.4.0.tar.gz && \
-    tar -xvf v1.4.0.tar.gz && \
-    cp -R /snpduoweb-1.4.0/html/* /var/www/html/snpduo && \
-    cp /snpduoweb-1.4.0/cgi-bin/*.R /usr/lib/cgi-bin/snpduo && \
-    cp /snpduoweb-1.4.0/cgi-bin/*.Rbin /usr/lib/cgi-bin/snpduo && \
-    cp /snpduoweb-1.4.0/cgi-bin/*.c /usr/lib/cgi-bin/snpduo && \
-	#cat /snpduoweb-1.4.0/html/SNPduo01.html | sed 's/\/cgi\-bin\/SNPduo\/SNPduo.cgi/\/usr\/lib\/cgi\-bin\/snpduo\/SNPduo.cgi/' > /var/www/html/snpduo/SNPduo01.html
-    cat /snpduoweb-1.4.0/html/SNPduo01.html | sed 's/\/cgi\-bin\/SNPduo\/SNPduo.cgi/\/cgi\-bin\/snpduo\/SNPduo.cgi/' > /var/www/html/snpduo/SNPduo01.html
+    wget -O snpduoweb_${TAG}.tar.gz https://github.com/RobersonLab/snpduoweb/archive/refs/tags/${TAG}.tar.gz && \
+    mkdir /snpduowebsrc && \
+    tar --one-top-level=/snpduowebsrc -xf snpduoweb_${TAG}.tar.gz && \
+    cp -R /snpduowebsrc/html/* /var/www/html/snpduo && \
+    cp /snpduowebsrc/cgi-bin/*.R /usr/lib/cgi-bin/snpduo && \
+    cp /snpduowebsrc/cgi-bin/*.Rbin /usr/lib/cgi-bin/snpduo && \
+    cp /snpduowebsrc/cgi-bin/*.c /usr/lib/cgi-bin/snpduo && \
+    cat /snpduowebsrc/html/SNPduo01.html | sed 's/\/cgi\-bin\/SNPduo\/SNPduo.cgi/\/cgi\-bin\/snpduo\/SNPduo.cgi/' > /var/www/html/snpduo/SNPduo01.html
 
 # compile shared library
 WORKDIR /usr/lib/cgi-bin/snpduo
 
 RUN R CMD SHLIB -o SNPduoCCodes.so SNPduoCCodes.c && \
-    cat /snpduoweb-1.4.0/cgi-bin/SNPduo.cgi | \
+    cat /snpduowebsrc/cgi-bin/SNPduo.cgi | \
     sed 's/RENAME => "TRUE"/RENAME => "FALSE"/' | \
     sed 's/dataDir = "\/home\/SNP\/uploads\/SNPduo"/dataDir = "\/data\/snpduo_uploads"/' | \
     sed 's/outputDir = "\/home\/SNP\/html\/uploads\/SNPduo"/outputDir = "\/var\/www\/html\/snpduo\/tool_output"/' | \
