@@ -450,6 +450,7 @@ until (! -e "${dataDir}/${upload}")
 ###########################################
 my $uploadStart = time();
 my $fh = $cgi->upload( "file" ) or error( $cgi, "File upload did not begin properly" );
+binmode $fh; # this sets the upload filehandle to binary mode.
 
 ##############################
 # Start platform adjustments #
@@ -466,7 +467,6 @@ if ($platform eq "Illumina")
 	
 	# ensure handles are text format
 	binmode LOCAL, ':encoding(UTF-8)';
-	binmode $fh, ':encoding(UTF-8)';
 
 	IlluminaFH: while (<$fh>)
 	{		
@@ -517,7 +517,6 @@ elsif ($platform eq "Affymetrix4")
 	
     # ensure handles are text format
 	binmode LOCAL, ':encoding(UTF-8)';
-	binmode $fh, ':encoding(UTF-8)';
 
     AffyFH: while (<$fh>)
     {	
@@ -576,7 +575,6 @@ elsif ($platform eq "HapMap")
 	
 	# ensure handles are text format
 	binmode LOCAL, ':encoding(UTF-8)';
-	binmode $fh, ':encoding(UTF-8)';
 
     HapMapFH: while (<$fh>)
     {
@@ -687,7 +685,6 @@ elsif ($platform eq "Custom")
 	
 	# ensure handles are text format
 	binmode LOCAL, ':encoding(UTF-8)';
-	binmode $fh, ':encoding(UTF-8)';
 
 	CustomFH: while (<$fh>)
 	{		
