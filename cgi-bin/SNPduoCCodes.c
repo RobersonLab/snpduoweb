@@ -2,6 +2,7 @@
 SNPDuoCCodes.c
 Increases the speed and efficiency of SNPDuo by coding it into compiled C code
 Created: May 14, 2007
+Edited: January 6, 2026
 */
 		
 #include <stdio.h>
@@ -68,7 +69,7 @@ void FastIBS (int *size, int *geno1, int *geno2, int *ibs)
 				/* if genotype 1 is AB, and we've already established */
 				/* that neither individual is missing (0) and */
 				/* that the two genotypes aren't equal, IBS1 is the only choice */
-				ibs[i] = 1
+				ibs[i] = 1;
 			}
 		}
 	}
