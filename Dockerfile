@@ -68,7 +68,8 @@ RUN apt-get update && \
 #############
 # setup cgi #
 #############
-RUN a2enmod cgi 
+RUN a2enmod cgi && \
+    a2dismod reqtimeout
 
 #############
 # install R #
