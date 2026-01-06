@@ -106,8 +106,7 @@ RUN mkdir -p /var/www/html/snpduo/tool_output && \
     cp /snpduowebsrc/cgi-bin/*.R /usr/lib/cgi-bin/snpduo && \
     cp /snpduowebsrc/cgi-bin/*.Rbin /usr/lib/cgi-bin/snpduo && \
     cp /snpduowebsrc/cgi-bin/*.c /usr/lib/cgi-bin/snpduo && \
-    #cat /snpduowebsrc/html/SNPduo01.html | sed 's/\/cgi\-bin\/SNPduo\/SNPduo.cgi/\/usr\/lib\/cgi\-bin\/snpduo\/SNPduo.cgi/' > /var/www/html/snpduo/SNPduo01.html
-	cat /snpduowebsrc/html/SNPduo01.html | sed 's/\/cgi\-bin\/SNPduo\/SNPduo.cgi/\/cgi\-bin\/snpduo\/SNPduo.cgi/'
+    cat /snpduowebsrc/html/SNPduo01.html | sed 's/\/SNPduo\//\/snpduo\//' > /var/www/html/snpduo/SNPduo01.html
 
 # compile shared library
 WORKDIR /usr/lib/cgi-bin/snpduo
@@ -128,7 +127,8 @@ WORKDIR /
 RUN chmod -R u+x /usr/lib/cgi-bin/snpduo && \
     chown -R www-data:www-data /var/www/html && \
     chown -R www-data:www-data /usr/lib/cgi-bin/snpduo && \
-    chown -R www-data:www-data /data/snpduo_uploads
+    chown -R www-data:www-data /data/snpduo_uploads && \
+    rm -fr /snpduowebsrc /snpduoweb_${TAG}.tar.gz
 
 #################################
 # default command starts apache #
