@@ -106,7 +106,8 @@ RUN mkdir -p /var/www/html/snpduo/tool_output && \
     cp /snpduowebsrc/cgi-bin/*.R /usr/lib/cgi-bin/snpduo && \
     cp /snpduowebsrc/cgi-bin/*.Rbin /usr/lib/cgi-bin/snpduo && \
     cp /snpduowebsrc/cgi-bin/*.c /usr/lib/cgi-bin/snpduo && \
-    cat /snpduowebsrc/html/SNPduo01.html | sed 's/\/cgi\-bin\/SNPduo\/SNPduo.cgi/\/usr\/lib\/cgi\-bin\/snpduo\/SNPduo.cgi/' > /var/www/html/snpduo/SNPduo01.html
+    #cat /snpduowebsrc/html/SNPduo01.html | sed 's/\/cgi\-bin\/SNPduo\/SNPduo.cgi/\/usr\/lib\/cgi\-bin\/snpduo\/SNPduo.cgi/' > /var/www/html/snpduo/SNPduo01.html
+	cat /snpduowebsrc/html/SNPduo01.html | sed 's/\/cgi\-bin\/SNPduo\/SNPduo.cgi/\/cgi\-bin\/snpduo\/SNPduo.cgi/'
 
 # compile shared library
 WORKDIR /usr/lib/cgi-bin/snpduo
