@@ -465,8 +465,8 @@ if ($platform eq "Illumina")
 	open (LOCAL, ">${dataDir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!"); 
 	
 	# Necessary for windows servers. Greater portability by specifying this
-	binmode LOCAL;
-	binmode $fh;
+	#binmode LOCAL;
+	#binmode $fh;
 
 	IlluminaFH: while (<$fh>)
 	{		
@@ -516,8 +516,8 @@ elsif ($platform eq "Affymetrix4")
     open (LOCAL, ">${dataDir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!"); 
 	
     # Necessary for windows servers. Greater portability by specifying this
-    binmode LOCAL;
-    binmode $fh;
+    #binmode LOCAL;
+    #binmode $fh;
 
     AffyFH: while (<$fh>)
     {	
@@ -575,8 +575,8 @@ elsif ($platform eq "HapMap")
 	open LOCAL, ">${dataDir}/${upload}" or error ($cgi,  "Cannot make file for upload:$!"); 
 	
 	# Necessary for windows servers. Greater portability by specifying this
-	binmode LOCAL;
-    binmode $fh;
+	#binmode LOCAL;
+    #binmode $fh;
 
     HapMapFH: while (<$fh>)
     {
@@ -686,8 +686,8 @@ elsif ($platform eq "Custom")
 	open (LOCAL, ">${dataDir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!"); 
 	
 	# Necessary for windows servers. Greater portability by specifying this
-	binmode LOCAL;
-	binmode $fh;
+	#binmode LOCAL;
+	#binmode $fh;
 
 	CustomFH: while (<$fh>)
 	{		
