@@ -1,7 +1,6 @@
-version: "3"
 services:
   snpduoweb:
-    container_name: snpduoweb
+    container_name: snpduowebserver
     image: thatdnaguy/snpduoweb:latest
     ports:
       - "80:80/tcp"
