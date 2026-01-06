@@ -4,26 +4,46 @@ Repository for the web-based version / visualization engine for the SNPduoWeb to
 
 Publication PMID: [19696932](http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0006711).
 
-The hosting servers for this web tool have since been decommissioned. Instead, we now include instructions on how to run your own server using Docker compose.
+The hosting servers for this web tool have since been decommissioned. You have to host yourself to run this tool. There are instructions for the standard bare metal install as well as a simple Docker setup.
 
-## Running SNPduoWeb on your own server
-1. Create a directory to hold the file data for SNPduoWeb. Example: `mkdir /data/snpduoweb`.
+## Running SNPduoWeb on your own server -- the Docker way
+Running the server via docker-compose should be the easiest setup. For this example, we will assume the tool data will be in /data/snpduoweb with a folder for uploads and downloads mounted as volumes in the container.
+
+This setup will require docker and docker-compose.
+
+1. Create a directory to hold the file data for SNPduoWeb.
+```bash
+mkdir -p /data/snpduoweb/download_dir /data/snpduoweb/upload_dir
+```
+
 2. Download the docker-compose.yml file from this repository into the directory you made for SNPduoWeb.
-3. Navigate to the SNPduoWeb directory on your server. `cd /data/snpduoweb`
-4. Edit the yml if you already have a service running on port 80. Example: change the yml from - "80:80/tcp" to - "3000:80/tcp" to run the service on port 3000 on the local machine (forwarded to port 80 in the image).
-5. Run the compose in that folder: `docker-compose up`
-6. Reach SNPduoWeb by going to http://MACHINEIP:PORT/snpduoweb in your browser.
+```bash
+cd /data/snpduoweb
+wget https://github.com/RobersonLab/snpduoweb/blob/master/docker-compose.yml
+```
+
+3. Edit the yml if you already have a service running on port 80. Example: from - "80:80/tcp" to - "3000:80/tcp" to run the service on port 3000 on the local machine (forwarded to port 80 in the image).
+
+4. Initialize the image by running docker-compose.
+```bash
+docker-compose up
+```
+
+5. Reach SNPduoWeb by going to http://MACHINEIP:PORT/snpduoweb in your browser. For example, if you're running it on another computer at IP address 192.168.1.250 using port 3000, you'd go to http://192.168.1.250:3000/snpduoweb
 
 If the service is running on port 80, the port isn't required.
 
-**Hint 1**: It doesn't work! Make sure the persistent volumes have the right file permissions to let the docker image read and write.
+**Hint 1**: The docker-compose command fails!
+Make sure the persistent volumes have the right file permissions to let the docker user read and write.
 
-**Hint 2**: No SSL?!?! Not in this image. If you need SSL protection, I'd probably recommend running an nginx reverse proxy to the ports instead of mucking with the image and trying to install the certificates.
+**Hint 2**: The data aren't encrypted in transit to and from the server!
+If you need SSL protection, I'd recommend running an nginx reverse proxy to the ports with a certificate instead of mucking with the image.
 
-**Hint 3**: My data timed out! The built-in apache time limits may be too short. You can try mucking with the Docker file to alter the configuration for Apache. Or prefilter your file to make sure you only are including data you want to test to reduce upload and processing time.
+**Hint 3**: My data timed out!
+The built-in apache time limits may be too short. I've disabled the timeout in the image to the best of my knowledge. If you still get timeouts, let me know to try and troubleshoot.
 
-## Installing SNPduoWeb - the fragile old-fashioned way
-Installing the web-interfaced version of SNPduo is relatively straightforward, with minimal requirements:
+## Installing SNPduoWeb on bare metal - the fragile old-fashioned way
+Installing the web-interfaced version of SNPduo has minimal requirements:
 
 * Linux based OS
 * Web server - we have used apache
@@ -32,14 +52,15 @@ Installing the web-interfaced version of SNPduo is relatively straightforward, w
 * Image Magick
 
 ### Download repo
-Clone the SNPduo Web repository from github. Switching to the newest tag is highly recommended.
+Clone the SNPduo Web repository from GitHub. Switching to the newest tag is highly recommended.
 
 ```bash
+mkdir /code
 cd /code
 git clone https://github.com/RobersonLab/snpduoweb.git
 ```
 
-There are two key directories included: cgi-bin that contains the executables needed by the web browser, and html, which contains the html files to serve the site. This code would have downloaded the files to /code/snpduoweb.
+There are two key directories included: cgi-bin containing the executables needed by the web browser, and html, which contains the html files to serve the site. This code would have downloaded the files to /code/snpduoweb.
 
 ### Setting up paths
 The paths for receiving input data and serving output data need to be readable and writable by your http daemon. It's also important to consider the path for input data. It should be a location writeable by your http daemon, but **should not** be within your html serving directory. This prevents someone else directly accessing uploaded data by brute force (unlikely but possible).
@@ -50,7 +71,7 @@ For this example, we'll assume that the tool is going to be running on a Linux b
 This is where upload data goes. I'm going to use a dedicated data directory for this. The user/group assignments will vary based on *nix platform and http server. In this example the user/group will be www-data/www-data.
 
 ```bash
-sudo mkdir /data/snpduo_uploads
+mkdir /data/snpduo_uploads
 sudo chown www-data.www-data /data/snpduo_uploads
 ```
 
@@ -87,7 +108,7 @@ sudo chown -R www-data.www-data /var/www/html/snpduo
 
 #### CGI scripts
 
-The perl script (cgi file) is executed to upload & format data, as well as prepare R scripts for processing the uploaded information. It handles all file renaming, copying, moving, and directory size checks as well. **Most be executable by daemon user!**
+The Perl script (cgi file) is executed to upload & format data, as well as prepare R scripts for processing the uploaded information. It handles all file renaming, copying, moving, and directory size checks as well. **The file must be executable by daemon user!**
 
 ```bash
 sudo cp /code/snpduoweb/cgi-bin/SNPduo.cgi /usr/lib/cgi-bin/snpduo
@@ -110,6 +131,8 @@ sudo chmod u+x /usr/lib/cgi-bin/snpduo/*
 
 ### Configuring the Perl CGI file
 The script is designed to require only a few modifications to function. Values, such as maximum directory sizes, directory locations, name of the host, etc are required. It's recommended to make a backup of the original CGI in the event of catastrophic file disruption. The default script is edited for this example below. All values requiring editing are at the top of the script.
+
+**Note** The FILE_MAX, DIR_MAX, and OUTPUT_MAX variables are likely different from what is shown here to better represent larger file sizes and more spacious drives than when the tool was first made.
 
 ```perl
 use constant RENAME => "TRUE";
@@ -152,10 +175,10 @@ Sample selection is based on which *columns* of data you want to compare in your
 You may hold control or shift to manually select multiple chromosomes from the upload page. Alternatively, the Genome by Chromosome mode will make a plot for each chromosome discovered in your upload data. The Genome method will make a **single** plot for the whole genome, and label the bottom to show the chromosome boundaries.
 
 ### Genome build
-Human builds 34-37 are available. This provides the chromosome sizes and cytoband information for plots.
+Human builds 34-38 are available. This provides the chromosome sizes and cytoband information for plots.
 
 ### Images
-An R generated postscript is created when selected. To make PNG representations of this postscript, both Make Postscripts and Make PNGs must be selected. If Do Not Make PNGs is selected, no thumbnail previews will be available on the output page. If Do Not Make Postscripts is selected, no thumbnails **or** postscript output will be available.
+An R generated postscript is created when selected. To make PNG representations of this postscript, both 'Make Postscripts' and 'Make PNGs' must be selected. If 'Do Not Make PNGs' is selected, no thumbnail previews will be available on the output page. If Do Not Make Postscripts is selected, no thumbnails **or** postscript output will be available.
 
 ### Block segmentation
 This **very simple** block segmentation algorithm will attempt to find the boundaries of IBS blocks in your data iteratively (IBS0, then IBS1, then IBS2). It may not do a very good job, and was tuned on SNP data based on trial and error. Use with caution compared to the data plots, but is surprisingly robust for finding  boundaries.
