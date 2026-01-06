@@ -101,7 +101,7 @@ RUN mkdir -p /var/www/html/snpduo/tool_output && \
     mkdir -p /data/snpduo_uploads && \
     wget -O snpduoweb_${TAG}.tar.gz https://github.com/RobersonLab/snpduoweb/archive/refs/tags/${TAG}.tar.gz && \
     mkdir /snpduowebsrc && \
-    tar --one-top-level=/snpduowebsrc -xf snpduoweb_${TAG}.tar.gz && \
+    tar --one-top-level=/snpduowebsrc --strip-components 1 -xf snpduoweb_${TAG}.tar.gz && \
     cp -R /snpduowebsrc/html/* /var/www/html/snpduo && \
     cp /snpduowebsrc/cgi-bin/*.R /usr/lib/cgi-bin/snpduo && \
     cp /snpduowebsrc/cgi-bin/*.Rbin /usr/lib/cgi-bin/snpduo && \
