@@ -464,9 +464,9 @@ if ($platform eq "Illumina")
 	# Upload the file first
 	open (LOCAL, ">${dataDir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!"); 
 	
-	# Necessary for windows servers. Greater portability by specifying this
-	#binmode LOCAL;
-	#binmode $fh;
+	# ensure handles are text format
+	binmode LOCAL, ':encoding(UTF-8)';
+	binmode $fh, ':encoding(UTF-8)';
 
 	IlluminaFH: while (<$fh>)
 	{		
@@ -515,9 +515,9 @@ elsif ($platform eq "Affymetrix4")
 	# Upload the file, substituting in No Calls where necessary"
     open (LOCAL, ">${dataDir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!"); 
 	
-    # Necessary for windows servers. Greater portability by specifying this
-    #binmode LOCAL;
-    #binmode $fh;
+    # ensure handles are text format
+	binmode LOCAL, ':encoding(UTF-8)';
+	binmode $fh, ':encoding(UTF-8)';
 
     AffyFH: while (<$fh>)
     {	
@@ -574,9 +574,9 @@ elsif ($platform eq "HapMap")
 	##########
 	open LOCAL, ">${dataDir}/${upload}" or error ($cgi,  "Cannot make file for upload:$!"); 
 	
-	# Necessary for windows servers. Greater portability by specifying this
-	#binmode LOCAL;
-    #binmode $fh;
+	# ensure handles are text format
+	binmode LOCAL, ':encoding(UTF-8)';
+	binmode $fh, ':encoding(UTF-8)';
 
     HapMapFH: while (<$fh>)
     {
@@ -685,9 +685,9 @@ elsif ($platform eq "Custom")
 	# Upload the file first
 	open (LOCAL, ">${dataDir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!"); 
 	
-	# Necessary for windows servers. Greater portability by specifying this
-	#binmode LOCAL;
-	#binmode $fh;
+	# ensure handles are text format
+	binmode LOCAL, ':encoding(UTF-8)';
+	binmode $fh, ':encoding(UTF-8)';
 
 	CustomFH: while (<$fh>)
 	{		
