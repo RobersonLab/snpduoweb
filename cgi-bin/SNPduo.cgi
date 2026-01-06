@@ -86,7 +86,7 @@ $CGI::POST_MAX = FILE_MAX;
 #########################
 # Set up some constants #
 #########################
-my $current_revision = "v1.4.0";
+my $current_revision = "v1.5.0";
 my $startTimeStamp = timestamp();
 my $pageGenerated = undef;
 my @batchchroms = ();
@@ -175,10 +175,13 @@ foreach $tmpChrom (@chromParam)
 	if ($tmpChrom =~ /^(\w*)$/)
 	{
 		$tmpChrom = $1;
-		if ($platform eq "HapMap" & $tmpChrom eq "GenomeByChromosome")
-		{
-			error ($cgi, "HapMap samples not allowed in \"Genome - By Chromosome\" mode");
-		}
+		
+		# this was a legacy error.
+		# i see no reason why it should still be checking.
+		#if ($platform eq "HapMap" & $tmpChrom eq "GenomeByChromosome")
+		#{
+		#	error ($cgi, "HapMap samples not allowed in \"Genome - By Chromosome\" mode");
+		#}
 	}
 	else
 	{
@@ -763,7 +766,7 @@ else
 #######################################################
 if ($runmode ne "Tabulate" && $segmentation eq "TRUE")
 {
-	open BEDFILE, ">${dataDir}/${upload}.bed" or error( $cgi,  "Cannot create UCSC browser file: $!" );
+	open BEDFILE, ">${dataDir}/${upload}.bed" or error( $cgi, "Cannot create UCSC browser file: $!" );
 	my $bedchrom = "chr" . $chrom; # Specify chromosome
 	
 	if ($bedchrom =~ /Genome/)
@@ -1865,27 +1868,27 @@ sub SortChromosomeList
 	
 	foreach $sorting (@chromsToSort)
 	{
-		$sorting =~ s/XY/24/g;
+		$sorting =~ s/XY/50/g;
 		$sorting =~ s/X/23/g;
-		$sorting =~ s/Y/25/g;
+		$sorting =~ s/Y/24/g;
 		
 		if ( $sorting =~ /MITO/g ) {
-			$sorting =~ s/MITO/26/g;
+			$sorting =~ s/MITO/25/g;
 			$mitoChar = "MITO";
 		}
 		
 		elsif ( $sorting =~ /Mito/g ) {
-			$sorting =~ s/Mito/26/g;
+			$sorting =~ s/Mito/25/g;
 			$mitoChar = "Mito";
 		}
 		
 		elsif ( $sorting =~ /MT/g ) {
-			$sorting =~ s/MT/26/g;
+			$sorting =~ s/MT/25/g;
 			$mitoChar = "MT";
 		}
 		
 		elsif ( $sorting =~ /M/g ) {
-			$sorting =~ s/M/26/g;
+			$sorting =~ s/M/25/g;
 			$mitoChar = "M";
 		}
 	}
@@ -1894,10 +1897,9 @@ sub SortChromosomeList
 	
 	foreach $sorting (@chromsToSort)
 	{
-		$sorting =~ s/24/XY/g;
 		$sorting =~ s/23/X/g;
-		$sorting =~ s/25/Y/g;
-		$sorting =~ s/26/${mitoChar}/g;
+		$sorting =~ s/24/Y/g;
+		$sorting =~ s/25/${mitoChar}/g;
 	}
 	
 	return( @chromsToSort );
