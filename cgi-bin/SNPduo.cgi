@@ -456,7 +456,7 @@ binmode $fh; # this sets the upload filehandle to binary mode.
 # setup output for text upload #
 ################################
 open (LOCAL, ">${dataDir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!");
-binmode LOCAL, ':encoding(UTF-8)';
+binmode LOCAL;#, ':encoding(UTF-8)';
 
 ##############################
 # Start platform adjustments #
@@ -485,9 +485,8 @@ if ($platform eq "Illumina")
 		# R doesn't like # so get rid of it elsewhere
 		s/\#//g;
 		
-		# strip endline characters
-		s/\n+$//g;
-		s/\r+$//g;
+		# strip trailing whitespace
+		s/\s+$//;
 		   
 		# Make the header something the script will find. Substitute Chr field for Chromosome
 		s/^Chr${delimiter}/Chromosome${delimiter}/g;
@@ -534,9 +533,8 @@ elsif ($platform eq "Affymetrix4")
 		# R doesn't like # so get rid of it elsewhere
 		s/\#//g;
 		
-		# strip endline characters
-		s/\n+$//g;
-		s/\r+$//g;
+		# strip trailing whitespace
+		s/\s+$//;
 		
 		# New CNAT No Calls are blanks. Substitute so the program sees them
 		s/${delimiter}${delimiter}/${delimiter}NoCall${delimiter}/g;
@@ -593,9 +591,8 @@ elsif ($platform eq "HapMap")
 		# R doesn't like # so get rid of it elsewhere
 		s/\#//g;
 		
-		# strip endline characters
-		s/\n+$//g;
-		s/\r+$//g;
+		# strip trailing whitespace
+		s/\s+$//;
 	    
 		# Split data up for printing
 		my ($rs, $allele, $chromosome, $position, $strand, $build, $center, $prot, $assay, $panel, $QC, @genotypes) = split(/$HapMapDelimiter/);
@@ -702,9 +699,8 @@ elsif ($platform eq "Custom")
 		# R doesn't like # so get rid of it elsewhere
 		s/\#//g;
 		
-		# strip endline characters
-		s/\n+$//g;
-		s/\r+$//g;
+		# strip trailing whitespace
+		s/\s+$//;
 				
 		print LOCAL $_; # Now write the file
 		print LOCAL "\n";
