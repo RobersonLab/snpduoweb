@@ -707,13 +707,11 @@ elsif ($platform eq "Custom")
 		s/\r+$//g;
 				
 		print LOCAL $_; # Now write the file
+		print LOCAL "\n";
 		
 		++$rowcounts; # Autoincrement the row count
 	}
 
-	close LOCAL; # Close things nicely
-	print LOCAL "\n";
-	
 	WriteRTemplate( $codeDir,$dataDir,$upload,$chrom,$chromList,$rComparisonIndexString,$compiledDir,$rowcounts,$postscriptWidth,$postscriptHeight,$genomeBuild, $totalNumberOfComparisons,$delimiter,$makePostscript, $runmode,$segmentation, 0 ); 
 }
 
