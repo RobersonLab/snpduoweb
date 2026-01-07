@@ -452,6 +452,12 @@ my $uploadStart = time();
 my $fh = $cgi->upload( "file" ) or error( $cgi, "File upload did not begin properly" );
 binmode $fh; # this sets the upload filehandle to binary mode.
 
+################################
+# setup output for text upload #
+################################
+open (LOCAL, ">${dataDir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!");
+binmode LOCAL, ':encoding(UTF-8)';
+
 ##############################
 # Start platform adjustments #
 ##############################
@@ -462,12 +468,6 @@ my $rowcounts = -1; # Set the row count to -1 so that headers are ignored
 ############
 if ($platform eq "Illumina")
 {
-	# Upload the file first
-	open (LOCAL, ">${dataDir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!"); 
-	
-	# ensure handles are text format
-	binmode LOCAL, ':encoding(UTF-8)';
-
 	IlluminaFH: while (<$fh>)
 	{		
 		# Skip commented lines
@@ -475,6 +475,8 @@ if ($platform eq "Illumina")
 		{
 			next IlluminaFH;
 		}
+		
+		# skip empty lines
 		if (/^\s*$/)
 		{
 			next IlluminaFH;
@@ -482,6 +484,10 @@ if ($platform eq "Illumina")
 		
 		# R doesn't like # so get rid of it elsewhere
 		s/\#//g;
+		
+		# strip endline characters
+		s/\n+$//g;
+		s/\r+$//g;
 		   
 		# Make the header something the script will find. Substitute Chr field for Chromosome
 		s/^Chr${delimiter}/Chromosome${delimiter}/g;
@@ -498,12 +504,11 @@ if ($platform eq "Illumina")
 		s/\.GType//g;
 		
 		print LOCAL $_; # Now write the file
+		print LOCAL "\n";
 		
 		++$rowcounts; # Autoincrement the row count
     }
 
-    close LOCAL; # Close things nicely
-    
     WriteRTemplate( $codeDir,$dataDir,$upload,$chrom,$chromList,$rComparisonIndexString,$compiledDir,$rowcounts,$postscriptWidth,$postscriptHeight,$genomeBuild, $totalNumberOfComparisons,$delimiter,$makePostscript, $runmode,$segmentation, 0 );
 }
 
@@ -512,26 +517,26 @@ elsif ($platform eq "Affymetrix4")
 	##############
 	# Affymetrix #
 	##############
-	# Upload the file, substituting in No Calls where necessary"
-    open (LOCAL, ">${dataDir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!"); 
-	
-    # ensure handles are text format
-	binmode LOCAL, ':encoding(UTF-8)';
-
-    AffyFH: while (<$fh>)
-    {	
+	AffyFH: while (<$fh>)
+	{	
 		# Skip commented lines
 		if (/^\s*\#/)
 		{
-			next AffyFH;
+			next IlluminaFH;
 		}
+		
+		# skip empty lines
 		if (/^\s*$/)
 		{
-			next AffyFH;
+			next IlluminaFH;
 		}
 		
 		# R doesn't like # so get rid of it elsewhere
 		s/\#//g;
+		
+		# strip endline characters
+		s/\n+$//g;
+		s/\r+$//g;
 		
 		# New CNAT No Calls are blanks. Substitute so the program sees them
 		s/${delimiter}${delimiter}/${delimiter}NoCall${delimiter}/g;
@@ -543,10 +548,10 @@ elsif ($platform eq "Affymetrix4")
 		s/\.loh//g;
 		
 		print LOCAL $_; # Print the adjusted file
+		print LOCAL "\n";
+		
 		++$rowcounts; # Autoincrement of the row count
     }
-
-    close LOCAL; # Close things nicely
 
 	WriteRTemplate( $codeDir,$dataDir,$upload,$chrom,$chromList,$rComparisonIndexString,$compiledDir,$rowcounts,$postscriptWidth,$postscriptHeight,$genomeBuild, $totalNumberOfComparisons,$delimiter,$makePostscript, $runmode,$segmentation, 1 );
 }
@@ -571,25 +576,26 @@ elsif ($platform eq "HapMap")
 	##########
 	# HapMap #
 	##########
-	open LOCAL, ">${dataDir}/${upload}" or error ($cgi,  "Cannot make file for upload:$!"); 
-	
-	# ensure handles are text format
-	binmode LOCAL, ':encoding(UTF-8)';
-
-    HapMapFH: while (<$fh>)
+	HapMapFH: while (<$fh>)
     {
 		# Skip commented lines
 		if (/^\s*\#/)
 		{
-			next HapMapFH;
+			next IlluminaFH;
 		}
+		
+		# skip empty lines
 		if (/^\s*$/)
 		{
-			next HapMapFH;
+			next IlluminaFH;
 		}
-	    
+		
 		# R doesn't like # so get rid of it elsewhere
 		s/\#//g;
+		
+		# strip endline characters
+		s/\n+$//g;
+		s/\r+$//g;
 	    
 		# Split data up for printing
 		my ($rs, $allele, $chromosome, $position, $strand, $build, $center, $prot, $assay, $panel, $QC, @genotypes) = split(/$HapMapDelimiter/);
@@ -670,8 +676,6 @@ elsif ($platform eq "HapMap")
 		++$rowcounts; # Autoincrement the row count
 	}
 	
-	close LOCAL; # Close things nicely
-
 	WriteRTemplate( $codeDir,$dataDir,$upload,$chrom,$chromList,$rComparisonIndexString,$compiledDir,$rowcounts,$postscriptWidth,$postscriptHeight,$genomeBuild, $totalNumberOfComparisons,$delimiter,$makePostscript, $runmode,$segmentation, 0 );
 }
 
@@ -681,25 +685,26 @@ elsif ($platform eq "Custom")
 	# Custom #
 	##########
 	# Upload the file first
-	open (LOCAL, ">${dataDir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!"); 
-	
-	# ensure handles are text format
-	binmode LOCAL, ':encoding(UTF-8)';
-
 	CustomFH: while (<$fh>)
 	{		
 		# Skip commented lines
 		if (/^\s*\#/)
 		{
-			next CustomFH;
+			next IlluminaFH;
 		}
+		
+		# skip empty lines
 		if (/^\s*$/)
 		{
-			next CustomFH;
+			next IlluminaFH;
 		}
 		
 		# R doesn't like # so get rid of it elsewhere
 		s/\#//g;
+		
+		# strip endline characters
+		s/\n+$//g;
+		s/\r+$//g;
 				
 		print LOCAL $_; # Now write the file
 		
@@ -707,9 +712,12 @@ elsif ($platform eq "Custom")
 	}
 
 	close LOCAL; # Close things nicely
+	print LOCAL "\n";
 	
 	WriteRTemplate( $codeDir,$dataDir,$upload,$chrom,$chromList,$rComparisonIndexString,$compiledDir,$rowcounts,$postscriptWidth,$postscriptHeight,$genomeBuild, $totalNumberOfComparisons,$delimiter,$makePostscript, $runmode,$segmentation, 0 ); 
 }
+
+close LOCAL; # close the filehandle
 
 my $uploadEnd = time();
 my $uploadTime = $uploadEnd - $uploadStart;
