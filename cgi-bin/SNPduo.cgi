@@ -485,8 +485,8 @@ if ($platform eq "Illumina")
 		# R doesn't like # so get rid of it elsewhere
 		s/\#//g;
 		
-		# strip trailing whitespace
-		s/\s+$//;
+		# strip carriage returns and newlines
+		s/[\r\n]+//g;
 		   
 		# Make the header something the script will find. Substitute Chr field for Chromosome
 		s/^Chr${delimiter}/Chromosome${delimiter}/g;
@@ -533,8 +533,8 @@ elsif ($platform eq "Affymetrix4")
 		# R doesn't like # so get rid of it elsewhere
 		s/\#//g;
 		
-		# strip trailing whitespace
-		s/\s+$//;
+		# strip carriage returns and newlines
+		s/[\r\n]+//g;
 		
 		# New CNAT No Calls are blanks. Substitute so the program sees them
 		s/${delimiter}${delimiter}/${delimiter}NoCall${delimiter}/g;
@@ -591,8 +591,8 @@ elsif ($platform eq "HapMap")
 		# R doesn't like # so get rid of it elsewhere
 		s/\#//g;
 		
-		# strip trailing whitespace
-		s/\s+$//;
+		# strip carriage returns and newlines
+		s/[\r\n]+//g;
 	    
 		# Split data up for printing
 		my ($rs, $allele, $chromosome, $position, $strand, $build, $center, $prot, $assay, $panel, $QC, @genotypes) = split(/$HapMapDelimiter/);
@@ -699,8 +699,8 @@ elsif ($platform eq "Custom")
 		# R doesn't like # so get rid of it elsewhere
 		s/\#//g;
 		
-		# strip trailing whitespace
-		s/\s+$//;
+		# strip carriage returns and newlines
+		s/[\r\n]+//g;
 				
 		print LOCAL $_; # Now write the file
 		print LOCAL "\n";
