@@ -4,7 +4,7 @@
 # SNPduo.cgi                  #
 # Author: Eli Roberson        #
 # Created: September 04, 2007 #
-# Edited: January 5, 2026     #
+# Edited: January 7, 2026     #
 ###############################
 
 use constant RENAME => "TRUE";
@@ -450,13 +450,13 @@ until (! -e "${dataDir}/${upload}")
 ###########################################
 my $uploadStart = time();
 my $fh = $cgi->upload( "file" ) or error( $cgi, "File upload did not begin properly" );
-binmode $fh; # this sets the upload filehandle to binary mode.
+binmode $fh; #, ':raw'; # change to raw ASCII
 
 ################################
 # setup output for text upload #
 ################################
 open (LOCAL, ">${dataDir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!");
-binmode LOCAL;#, ':encoding(UTF-8)';
+binmode LOCAL; #, ':raw'; #':encoding(UTF-8)';
 
 ##############################
 # Start platform adjustments #
@@ -468,42 +468,42 @@ my $rowcounts = -1; # Set the row count to -1 so that headers are ignored
 ############
 if ($platform eq "Illumina")
 {
-	IlluminaFH: while (<$fh>)
-	{		
-		# Skip commented lines
-		if (/^\s*\#/)
-		{
-			next IlluminaFH;
-		}
+	while (my $uploadline = <$fh>)
+	{
+		# initial processing
+		# fix up line endings
+		$uploadline =~ s/\r\n?/\n/g;
+		chomp $uploadline;
+		
+		# do any tainting 
+		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
+		
+		$uploadline = $1;
+		
+		# skip commented lines
+		next if $uploadline =~ /^\s*\#/;
 		
 		# skip empty lines
-		if (/^\s*$/)
-		{
-			next IlluminaFH;
-		}
+		next if $uploadline =~ /^\s*$/;
 		
-		# R doesn't like # so get rid of it elsewhere
-		s/\#//g;
-		
-		# strip carriage returns and newlines
-		s/[\r\n]+//g;
+		# get rid of stray hashes since R doesn't like them midstream
+		$uploadline =~ s/\#+//g;
 		   
 		# Make the header something the script will find. Substitute Chr field for Chromosome
-		s/^Chr${delimiter}/Chromosome${delimiter}/g;
-		s/${delimiter}Chr${delimiter}/${delimiter}Chromosome${delimiter}/g;
-		s/${delimiter}Chr\n/${delimiter}Chromosome\n/g;
+		$uploadline =~ s/^Chr${delimiter}/Chromosome${delimiter}/g;
+		$uploadline =~ s/${delimiter}Chr${delimiter}/${delimiter}Chromosome${delimiter}/g;
+		$uploadline =~ s/${delimiter}Chr\n/${delimiter}Chromosome\n/g;
 		
 
 		# Adjust the name of the position column
-		s/^Position${delimiter}/Physical.Position${delimiter}/g;
-		s/${delimiter}Position${delimiter}/${delimiter}Physical.Position${delimiter}/g;
-		s/${delimiter}Position\n/${delimiter}Physical.Position\n/g;
+		$uploadline =~ s/^Position${delimiter}/Physical.Position${delimiter}/g;
+		$uploadline =~ s/${delimiter}Position${delimiter}/${delimiter}Physical.Position${delimiter}/g;
+		$uploadline =~ s/${delimiter}Position\n/${delimiter}Physical.Position\n/g;
 		
 		# Get read or .GType suffix on genotype columns
-		s/\.GType//g;
+		$uploadline =~ s/\.GType//g;
 		
-		print LOCAL $_; # Now write the file
-		print LOCAL "\n";
+		print LOCAL "$uploadline\n";
 		
 		++$rowcounts; # Autoincrement the row count
     }
@@ -516,37 +516,37 @@ elsif ($platform eq "Affymetrix4")
 	##############
 	# Affymetrix #
 	##############
-	AffyFH: while (<$fh>)
-	{	
-		# Skip commented lines
-		if (/^\s*\#/)
-		{
-			next IlluminaFH;
-		}
+	while (my $uploadline = <$fh>)
+	{
+		# initial processing
+		# fix up line endings
+		$uploadline =~ s/\r\n?/\n/g;
+		chomp $uploadline;
+		
+		# undo any tainting 
+		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
+		
+		$uploadline = $1;
+		
+		# skip commented lines
+		next if $uploadline =~ /^\s*\#/;
 		
 		# skip empty lines
-		if (/^\s*$/)
-		{
-			next IlluminaFH;
-		}
+		next if $uploadline =~ /^\s*$/;
 		
-		# R doesn't like # so get rid of it elsewhere
-		s/\#//g;
-		
-		# strip carriage returns and newlines
-		s/[\r\n]+//g;
+		# get rid of stray hashes since R doesn't like them midstream
+		$uploadline =~ s/\#+//g;
 		
 		# New CNAT No Calls are blanks. Substitute so the program sees them
-		s/${delimiter}${delimiter}/${delimiter}NoCall${delimiter}/g;
-		s/${delimiter}\n/${delimiter}NoCall\n/g;
+		$uploadline =~ s/${delimiter}${delimiter}/${delimiter}NoCall${delimiter}/g;
+		$uploadline =~ s/${delimiter}\n/${delimiter}NoCall\n/g;
 		
 		# Remove annoying suffixes
-		s/_Call//g;
-		s/\.brlmm//g;
-		s/\.loh//g;
+		$uploadline =~ s/_Call//g;
+		$uploadline =~ s/\.brlmm//g;
+		$uploadline =~ s/\.loh//g;
 		
-		print LOCAL $_; # Print the adjusted file
-		print LOCAL "\n";
+		print LOCAL "$uploadline\n";
 		
 		++$rowcounts; # Autoincrement of the row count
     }
@@ -574,28 +574,29 @@ elsif ($platform eq "HapMap")
 	##########
 	# HapMap #
 	##########
-	HapMapFH: while (<$fh>)
+	while (my $uploadline = <$fh>)
     {
-		# Skip commented lines
-		if (/^\s*\#/)
-		{
-			next IlluminaFH;
-		}
+		# initial processing
+		# fix up line endings
+		$uploadline =~ s/\r\n?/\n/g;
+		chomp $uploadline;
+		
+		# do any tainting 
+		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
+		
+		$uploadline = $1;
+		
+		# skip commented lines
+		next if $uploadline =~ /^\s*\#/;
 		
 		# skip empty lines
-		if (/^\s*$/)
-		{
-			next IlluminaFH;
-		}
+		next if $uploadline =~ /^\s*$/;
 		
-		# R doesn't like # so get rid of it elsewhere
-		s/\#//g;
+		# get rid of stray hashes since R doesn't like them midstream
+		$uploadline =~ s/\#+//g;
 		
-		# strip carriage returns and newlines
-		s/[\r\n]+//g;
-	    
 		# Split data up for printing
-		my ($rs, $allele, $chromosome, $position, $strand, $build, $center, $prot, $assay, $panel, $QC, @genotypes) = split(/$HapMapDelimiter/);
+		my ($rs, $allele, $chromosome, $position, $strand, $build, $center, $prot, $assay, $panel, $QC, @genotypes) = split(/$HapMapDelimiter/, $uploadline );
 	    
 		# Before printing anything, check alleles to see how many there are.
 		# If there are more than two, skip it.
@@ -604,7 +605,7 @@ elsif ($platform eq "HapMap")
 	    
 		if(scalar(@alleletest) > 2)
 		{
-			next HapMapFH;
+			next;
 		}
 	    
 		# Change chr and pos to the same as others
@@ -621,7 +622,7 @@ elsif ($platform eq "HapMap")
 			{
 				print LOCAL "${HapMapDelimiter}${name}";
 			}
-			next HapMapFH;
+			next;
 		}
 		
 		# Change genotypes
@@ -682,28 +683,28 @@ elsif ($platform eq "Custom")
 	# Custom #
 	##########
 	# Upload the file first
-	CustomFH: while (<$fh>)
-	{		
-		# Skip commented lines
-		if (/^\s*\#/)
-		{
-			next IlluminaFH;
-		}
+	while (my $uploadline = <$fh>)
+	{
+		# initial processing
+		# fix up line endings
+		$uploadline =~ s/\r\n?/\n/g;
+		chomp $uploadline;
+		
+		# do any tainting 
+		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
+		
+		$uploadline = $1;
+		
+		# skip commented lines
+		next if $uploadline =~ /^\s*\#/;
 		
 		# skip empty lines
-		if (/^\s*$/)
-		{
-			next IlluminaFH;
-		}
+		next if $uploadline =~ /^\s*$/;
 		
-		# R doesn't like # so get rid of it elsewhere
-		s/\#//g;
-		
-		# strip carriage returns and newlines
-		s/[\r\n]+//g;
+		# get rid of stray hashes since R doesn't like them midstream
+		$uploadline =~ s/\#+//g;
 				
-		print LOCAL $_; # Now write the file
-		print LOCAL "\n";
+		print LOCAL "$uploadline\n";
 		
 		++$rowcounts; # Autoincrement the row count
 	}
