@@ -468,6 +468,8 @@ my $rowcounts = -1; # Set the row count to -1 so that headers are ignored
 ############
 if ($platform eq "Illumina")
 {
+	local $/ = "\n"; # explicit input delimiter to ensure consistency in processing
+	
 	while (my $uploadline = <$fh>)
 	{
 		# initial processing
@@ -516,6 +518,8 @@ elsif ($platform eq "Affymetrix4")
 	##############
 	# Affymetrix #
 	##############
+	local $/ = "\n"; # explicit input delimiter to ensure consistency in processing
+	
 	while (my $uploadline = <$fh>)
 	{
 		# initial processing
@@ -574,6 +578,8 @@ elsif ($platform eq "HapMap")
 	##########
 	# HapMap #
 	##########
+	local $/ = "\n"; # explicit input delimiter to ensure consistency in processing
+	
 	while (my $uploadline = <$fh>)
     {
 		# initial processing
@@ -683,6 +689,8 @@ elsif ($platform eq "Custom")
 	# Custom #
 	##########
 	# Upload the file first
+	local $/ = "\n"; # explicit input delimiter to ensure consistency in processing
+	
 	while (my $uploadline = <$fh>)
 	{
 		# initial processing
