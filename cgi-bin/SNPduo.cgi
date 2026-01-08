@@ -483,8 +483,6 @@ else {
 	$encoding = 'UTF-8';
 }
 
-my $decodedpeek = decode( $encoding, $peek );
-
 ############
 # Illumina #
 ############
@@ -494,12 +492,12 @@ if ($platform eq "Illumina")
 	
 	while (my $rawupload = <$fh>)
 	{
-		my uploadline = decode( $encoding, $rawupload );
-		
-		if ( $rowcounts < 0 )
+		if ($rowcounts < 0)
 		{
-			$uploadline = $decodedpeak . $uploadline;
+			$rawupload = $peek . $rawupload;
 		}
+		
+		my uploadline = decode( $encoding, $rawupload );
 		
 		# initial processing
 		# fix up line endings
@@ -551,12 +549,12 @@ elsif ($platform eq "Affymetrix4")
 	
 	while (my $rawupload = <$fh>)
 	{
-		my uploadline = decode( $encoding, $rawupload );
-		
-		if ( $rowcounts < 0 )
+		if ($rowcounts < 0)
 		{
-			$uploadline = $decodedpeak . $uploadline;
+			$rawupload = $peek . $rawupload;
 		}
+		
+		my uploadline = decode( $encoding, $rawupload );
 		
 		# initial processing
 		# fix up line endings
@@ -618,12 +616,12 @@ elsif ($platform eq "HapMap")
 	
 	while (my $rawupload = <$fh>)
 	{
-		my uploadline = decode( $encoding, $rawupload );
-		
-		if ( $rowcounts < 0 )
+		if ($rowcounts < 0)
 		{
-			$uploadline = $decodedpeak . $uploadline;
+			$rawupload = $peek . $rawupload;
 		}
+		
+		my uploadline = decode( $encoding, $rawupload );
 		
 		# initial processing
 		# fix up line endings
@@ -736,12 +734,12 @@ elsif ($platform eq "Custom")
 	
 	while (my $rawupload = <$fh>)
 	{
-		my uploadline = decode( $encoding, $rawupload );
-		
-		if ( $rowcounts < 0 )
+		if ($rowcounts < 0)
 		{
-			$uploadline = $decodedpeak . $uploadline;
+			$rawupload = $peek . $rawupload;
 		}
+		
+		my uploadline = decode( $encoding, $rawupload );
 		
 		# initial processing
 		# fix up line endings
