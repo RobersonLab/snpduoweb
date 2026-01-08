@@ -711,7 +711,7 @@ elsif ($platform eq "Custom")
 		$uploadline =~ s/^\x{EF}\x{BB}\x{BF}//g;
 		
 		# do any untainting 
-		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
+		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or error( $cgi, "Problem untainting for string:[$uploadline]." );
 		
 		$uploadline = $1;
 		
