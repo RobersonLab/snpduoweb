@@ -6,6 +6,19 @@ Publication PMID: [19696932](http://www.plosone.org/article/info%3Adoi%2F10.1371
 
 The hosting servers for this web tool have since been decommissioned. You have to host yourself to run this tool. There are instructions for the standard bare metal install as well as a simple Docker setup.
 
+## Important notes regarding security
+This tool does not **in any way** try to protect your data. It's just a system for uploading and processing data. Security becomes an issue if you are processing clinically relevant data. I can in no way offer you professional advice on securing your data. I can pass along how I approach this in our environments.
+
+1. Host machine security. Keep the OS up-to-date with security fixes. Use tools like fail2ban to automatically block addresses sniffing for access to the machine. Use a firewall to limit access to only required ports.
+
+2. Remote user access. Use minimum user permissions, i.e. not everyone needs root privileges. Force public-private key authentication **only** for SSH sessions, limit remote logins to specific user accounts you have created, and do not allow remote root login at all.
+
+3. Use a reverse proxy like nginx with Let's Encrypt certificates to allow secure connections between the browser and the server.
+
+4. Use full disk encryption of disks on the host machine.
+
+Only a security consultant can advise you for use in protected environments with sensitive data. For research purposes, these approaches may reduce your attack surface for bag actors.
+
 ## Running SNPduoWeb on your own server -- the Docker way
 Running the server via docker-compose should be the easiest setup. For this example, we will assume the tool data will be in /data/snpduoweb with a folder for uploads and downloads mounted as volumes in the container.
 
@@ -36,10 +49,7 @@ If the service is running on port 80, the port isn't required.
 **Hint 1**: The docker-compose command fails!
 Make sure the persistent volumes have the right file permissions to let the docker user read and write.
 
-**Hint 2**: The data aren't encrypted in transit to and from the server!
-If you need SSL protection, I'd recommend running an nginx reverse proxy to the ports with a certificate instead of mucking with the image.
-
-**Hint 3**: My data timed out!
+**Hint 2**: My data timed out!
 The built-in apache time limits may be too short. I've disabled the timeout in the image to the best of my knowledge. If you still get timeouts, let me know to try and troubleshoot.
 
 ## Installing SNPduoWeb on bare metal - the fragile old-fashioned way
