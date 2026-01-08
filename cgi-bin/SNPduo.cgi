@@ -72,8 +72,11 @@ use constant OUTPUT_MAX => 1024 * 1024 * 50;
 # DO NOT CHANGE BELOW THE LINE UNLESS YOU ARE MODIFYING CODE #
 ##############################################################
 
+####################
+# use declarations #
+####################
 use CGI;
-# Required because the web input is parsed by CGI interface rather than POST
+use Encode qw(decode encode);
 
 if ( PERLMAGICK eq "TRUE" and CAIRO eq "FALSE" )
 {
@@ -396,7 +399,7 @@ else
 # Filename must start with a number or letter, not other characters or whitespace
 if ($file !~ m/^\w.*$/)
 {
-    error($cgi, "Filename  \"${file}\" doesn't begin with number or letter"); 
+	error($cgi, "Filename  \"${file}\" doesn't begin with number or letter"); 
 }
 
 #####################################
@@ -450,18 +453,37 @@ until (! -e "${dataDir}/${upload}")
 ###########################################
 my $uploadStart = time();
 my $fh = $cgi->upload( "file" ) or error( $cgi, "File upload did not begin properly" );
-binmode $fh; #, ':raw'; # change to raw ASCII
+binmode $fh; # binmode without specification should default to raw binary
 
 ################################
 # setup output for text upload #
 ################################
 open (LOCAL, ">${dataDir}/${upload}") or error ($cgi,  "Cannot make file for upload:$!");
-binmode LOCAL; #, ':raw'; #':encoding(UTF-8)';
+binmode LOCAL, ':encoding(UTF-8)'; # set explicitly to output UTF-8
 
 ##############################
 # Start platform adjustments #
 ##############################
 my $rowcounts = -1; # Set the row count to -1 so that headers are ignored
+
+#####################################
+# read enough to determine encoding #
+#####################################
+my encoding;
+
+read($fh, my $peek, 4);
+
+if ($peek =~ /^\xFF\xFE/) {
+	$encoding = 'UTF-16LE';
+}
+elsif ($peek =~ /^\xFE\xFF/) {
+	$encoding = 'UTF-16BE';
+}
+else {
+	$encoding = 'UTF-8';
+}
+
+my $decodedpeek = decode( $encoding, $peek );
 
 ############
 # Illumina #
@@ -470,15 +492,19 @@ if ($platform eq "Illumina")
 {
 	local $/ = "\n"; # explicit input delimiter to ensure consistency in processing
 	
-	while (my $uploadline = <$fh>)
+	while (my $rawupload = <$fh>)
 	{
+		my uploadline = decode( $encoding, $rawupload );
+		
+		if ( $rowcounts < 0 )
+		{
+			$uploadline = $decodedpeak . $uploadline;
+		}
+		
 		# initial processing
 		# fix up line endings
 		$uploadline =~ s/\r\n?/\n/g;
 		chomp $uploadline;
-		
-		# delete byte-order-mark at front of some UTF uploads
-		$uploadline =~ s/^[\x{FF}\x{FE}]+//g;
 		
 		# do any untainting 
 		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
@@ -511,9 +537,9 @@ if ($platform eq "Illumina")
 		print LOCAL "$uploadline\n";
 		
 		++$rowcounts; # Autoincrement the row count
-    }
+	}
 
-    WriteRTemplate( $codeDir,$dataDir,$upload,$chrom,$chromList,$rComparisonIndexString,$compiledDir,$rowcounts,$postscriptWidth,$postscriptHeight,$genomeBuild, $totalNumberOfComparisons,$delimiter,$makePostscript, $runmode,$segmentation, 0 );
+	WriteRTemplate( $codeDir,$dataDir,$upload,$chrom,$chromList,$rComparisonIndexString,$compiledDir,$rowcounts,$postscriptWidth,$postscriptHeight,$genomeBuild, $totalNumberOfComparisons,$delimiter,$makePostscript, $runmode,$segmentation, 0 );
 }
 
 elsif ($platform eq "Affymetrix4")
@@ -523,17 +549,21 @@ elsif ($platform eq "Affymetrix4")
 	##############
 	local $/ = "\n"; # explicit input delimiter to ensure consistency in processing
 	
-	while (my $uploadline = <$fh>)
+	while (my $rawupload = <$fh>)
 	{
+		my uploadline = decode( $encoding, $rawupload );
+		
+		if ( $rowcounts < 0 )
+		{
+			$uploadline = $decodedpeak . $uploadline;
+		}
+		
 		# initial processing
 		# fix up line endings
 		$uploadline =~ s/\r\n?/\n/g;
 		chomp $uploadline;
 		
-		# delete byte-order-mark at front of some UTF uploads
-		$uploadline =~ s/^[\x{FF}\x{FE}]+//g;
-		
-		# undo any untainting 
+		# do any untainting 
 		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
 		
 		$uploadline = $1;
@@ -559,14 +589,14 @@ elsif ($platform eq "Affymetrix4")
 		print LOCAL "$uploadline\n";
 		
 		++$rowcounts; # Autoincrement of the row count
-    }
+	}
 
 	WriteRTemplate( $codeDir,$dataDir,$upload,$chrom,$chromList,$rComparisonIndexString,$compiledDir,$rowcounts,$postscriptWidth,$postscriptHeight,$genomeBuild, $totalNumberOfComparisons,$delimiter,$makePostscript, $runmode,$segmentation, 1 );
 }
 
 elsif ($platform eq "HapMap")
 {
-    my $HapMapDelimiter = "";
+	my $HapMapDelimiter = "";
 	
 	if ($delimiter =~ /\",\"/)
 	{
@@ -586,15 +616,19 @@ elsif ($platform eq "HapMap")
 	##########
 	local $/ = "\n"; # explicit input delimiter to ensure consistency in processing
 	
-	while (my $uploadline = <$fh>)
-    {
+	while (my $rawupload = <$fh>)
+	{
+		my uploadline = decode( $encoding, $rawupload );
+		
+		if ( $rowcounts < 0 )
+		{
+			$uploadline = $decodedpeak . $uploadline;
+		}
+		
 		# initial processing
 		# fix up line endings
 		$uploadline =~ s/\r\n?/\n/g;
 		chomp $uploadline;
-		
-		# delete byte-order-mark at front of some UTF uploads
-		$uploadline =~ s/^[\x{FF}\x{FE}]+//g;
 		
 		# do any untainting 
 		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
@@ -612,25 +646,25 @@ elsif ($platform eq "HapMap")
 		
 		# Split data up for printing
 		my ($rs, $allele, $chromosome, $position, $strand, $build, $center, $prot, $assay, $panel, $QC, @genotypes) = split(/$HapMapDelimiter/, $uploadline );
-	    
+		
 		# Before printing anything, check alleles to see how many there are.
 		# If there are more than two, skip it.
 
 		my @alleletest = split /\//, $allele;
-	    
+		
 		if(scalar(@alleletest) > 2)
 		{
 			next;
 		}
-	    
+		
 		# Change chr and pos to the same as others
 		$chromosome =~ s/chrom/Chromosome/g;
 		$chromosome =~ s/chr//g;
 		$position =~ s/pos/Physical.Position/g;
-	    
+		
 		# Print the chromosome and position
 		print LOCAL "${chromosome}${HapMapDelimiter}${position}";
-	    
+		
 		if (scalar(@alleletest) < 2)
 		{
 			foreach $name (@genotypes)
@@ -700,18 +734,22 @@ elsif ($platform eq "Custom")
 	# Upload the file first
 	local $/ = "\n"; # explicit input delimiter to ensure consistency in processing
 	
-	while (my $uploadline = <$fh>)
+	while (my $rawupload = <$fh>)
 	{
+		my uploadline = decode( $encoding, $rawupload );
+		
+		if ( $rowcounts < 0 )
+		{
+			$uploadline = $decodedpeak . $uploadline;
+		}
+		
 		# initial processing
 		# fix up line endings
 		$uploadline =~ s/\r\n?/\n/g;
 		chomp $uploadline;
 		
-		# delete byte-order-mark at front of some UTF uploads
-		$uploadline =~ s/^[\x{FF}\x{FE}]+//g;
-		
 		# do any untainting 
-		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or error( $cgi, "Problem untainting for string:\n[$uploadline]." );
+		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
 		
 		$uploadline = $1;
 		
@@ -934,9 +972,9 @@ if ($chrom ne "GenomeByChromosome" && $runmode ne "Tabulate")
 			}
 		}
 			
-		########################################
-		# Move files to the proper directories to display on results page
-		########################################
+		###################################################################
+		# Move files to the proper directories to display on results page #
+		###################################################################
 		# Using mv command-line directive
 		if (RENAME ne "TRUE")
 		{	 
@@ -1125,7 +1163,7 @@ elsif ($chrom eq "GenomeByChromosome" && $runmode ne "Tabulate")
 		# Make some pngs        #
 		# Move to web directory #
 		# Then add to zip file  #
-		# Remove files          #	
+		# Remove files          #
 		#########################
 		my $pngwidth = 0;#####PERLMAGICK#####
 		my $pngheight = 0;#####PERLMAGICK#####
@@ -1416,9 +1454,9 @@ elsif ($runmode eq "Tabulate")
 
 	@batchchroms = SortChromosomeList( @batchchroms );
 	
-	########################################
-	# Move the ibs and genotype summary files
-	########################################
+	###########################################
+	# Move the ibs and genotype summary files #
+	###########################################
 	if (RENAME eq "TRUE")
 	{
 		rename ("${dataDir}/${upload}.SummaryIBS.csv","${outputDir}/${upload}.SummaryIBS.csv");
