@@ -699,7 +699,7 @@ elsif ($platform eq "Custom")
 		chomp $uploadline;
 		
 		# do any tainting 
-		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
+		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or error( $cgi, "The uploaded line didn't de-taint: [$uploadline]" );
 		
 		$uploadline = $1;
 		
