@@ -477,8 +477,8 @@ if ($platform eq "Illumina")
 		$uploadline =~ s/\r\n?/\n/g;
 		chomp $uploadline;
 		
-		# delete byte-order-mark at front of UTF16 uploads
-		$uploadline =~ s/^\x{EF}\x{BB}\x{BF}//g;
+		# delete byte-order-mark at front of some UTF uploads
+		$uploadline =~ s/^[\x{FF}\x{FE}]+//g;
 		
 		# do any untainting 
 		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
@@ -530,8 +530,8 @@ elsif ($platform eq "Affymetrix4")
 		$uploadline =~ s/\r\n?/\n/g;
 		chomp $uploadline;
 		
-		# delete byte-order-mark at front of UTF16 uploads
-		$uploadline =~ s/^\x{EF}\x{BB}\x{BF}//g;
+		# delete byte-order-mark at front of some UTF uploads
+		$uploadline =~ s/^[\x{FF}\x{FE}]+//g;
 		
 		# undo any untainting 
 		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
@@ -593,8 +593,8 @@ elsif ($platform eq "HapMap")
 		$uploadline =~ s/\r\n?/\n/g;
 		chomp $uploadline;
 		
-		# delete byte-order-mark at front of UTF16 uploads
-		$uploadline =~ s/^\x{EF}\x{BB}\x{BF}//g;
+		# delete byte-order-mark at front of some UTF uploads
+		$uploadline =~ s/^[\x{FF}\x{FE}]+//g;
 		
 		# do any untainting 
 		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
@@ -707,11 +707,11 @@ elsif ($platform eq "Custom")
 		$uploadline =~ s/\r\n?/\n/g;
 		chomp $uploadline;
 		
-		# delete byte-order-mark at front of UTF16 uploads
-		$uploadline =~ s/^\x{EF}\x{BB}\x{BF}//g;
+		# delete byte-order-mark at front of some UTF uploads
+		$uploadline =~ s/^[\x{FF}\x{FE}]+//g;
 		
 		# do any untainting 
-		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or error( $cgi, "Problem untainting for string:[$uploadline]." );
+		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or error( $cgi, "Problem untainting for string:\n[$uploadline]." );
 		
 		$uploadline = $1;
 		
