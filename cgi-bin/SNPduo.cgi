@@ -67,6 +67,11 @@ use constant DIR_MAX => 1024 * 1024 * 50;
 use constant OUTPUT_MAX => 1024 * 1024 * 50;
 #Max 50 Gb of output stored in output directory. Same explain as DIR_MAX
 
+###################
+# set read buffer #
+###################
+use constant => READ_BUFFER = 4096;
+
 ##############################################################
 # WARNING!!!!!!!!!!!!!!                                      #
 # DO NOT CHANGE BELOW THE LINE UNLESS YOU ARE MODIFYING CODE #
@@ -76,7 +81,7 @@ use constant OUTPUT_MAX => 1024 * 1024 * 50;
 # use declarations #
 ####################
 use CGI;
-use Encode qw(decode encode);
+use Encode qw(encode); #qw(decode encode);
 
 if ( PERLMAGICK eq "TRUE" and CAIRO eq "FALSE" )
 {
@@ -453,7 +458,8 @@ until (! -e "${dataDir}/${upload}")
 ###########################################
 my $uploadStart = time();
 my $fh = $cgi->upload( "file" ) or error( $cgi, "File upload did not begin properly" );
-binmode $fh; # binmode without specification should default to raw binary
+
+my $linefactory = binary_to_text_reader($fh); # untaint happens in reader function
 
 ################################
 # setup output for text upload #
@@ -466,48 +472,17 @@ binmode LOCAL, ':encoding(UTF-8)'; # set explicitly to output UTF-8
 ##############################
 my $rowcounts = -1; # Set the row count to -1 so that headers are ignored
 
-#####################################
-# read enough to determine encoding #
-#####################################
-my encoding;
-
-read($fh, my $peek, 4);
-
-if ($peek =~ /^\xFF\xFE/) {
-	$encoding = 'UTF-16LE';
-}
-elsif ($peek =~ /^\xFE\xFF/) {
-	$encoding = 'UTF-16BE';
-}
-else {
-	$encoding = 'UTF-8';
-}
-
 ############
 # Illumina #
 ############
 if ($platform eq "Illumina")
 {
-	local $/ = "\n"; # explicit input delimiter to ensure consistency in processing
-	
-	while (my $rawupload = <$fh>)
+	while (my $uploadline = $linefactory->())
 	{
-		if ($rowcounts < 0)
-		{
-			$rawupload = $peek . $rawupload;
-		}
-		
-		my uploadline = decode( $encoding, $rawupload );
-		
 		# initial processing
 		# fix up line endings
 		$uploadline =~ s/\r\n?/\n/g;
 		chomp $uploadline;
-		
-		# do any untainting 
-		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
-		
-		$uploadline = $1;
 		
 		# skip commented lines
 		next if $uploadline =~ /^\s*\#/;
@@ -545,26 +520,12 @@ elsif ($platform eq "Affymetrix4")
 	##############
 	# Affymetrix #
 	##############
-	local $/ = "\n"; # explicit input delimiter to ensure consistency in processing
-	
-	while (my $rawupload = <$fh>)
+	while (my $uploadline = $linefactory->())
 	{
-		if ($rowcounts < 0)
-		{
-			$rawupload = $peek . $rawupload;
-		}
-		
-		my uploadline = decode( $encoding, $rawupload );
-		
 		# initial processing
 		# fix up line endings
 		$uploadline =~ s/\r\n?/\n/g;
 		chomp $uploadline;
-		
-		# do any untainting 
-		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
-		
-		$uploadline = $1;
 		
 		# skip commented lines
 		next if $uploadline =~ /^\s*\#/;
@@ -612,26 +573,12 @@ elsif ($platform eq "HapMap")
 	##########
 	# HapMap #
 	##########
-	local $/ = "\n"; # explicit input delimiter to ensure consistency in processing
-	
-	while (my $rawupload = <$fh>)
+	while (my $uploadline = $linefactory->())
 	{
-		if ($rowcounts < 0)
-		{
-			$rawupload = $peek . $rawupload;
-		}
-		
-		my uploadline = decode( $encoding, $rawupload );
-		
 		# initial processing
 		# fix up line endings
 		$uploadline =~ s/\r\n?/\n/g;
 		chomp $uploadline;
-		
-		# do any untainting 
-		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
-		
-		$uploadline = $1;
 		
 		# skip commented lines
 		next if $uploadline =~ /^\s*\#/;
@@ -729,27 +676,12 @@ elsif ($platform eq "Custom")
 	##########
 	# Custom #
 	##########
-	# Upload the file first
-	local $/ = "\n"; # explicit input delimiter to ensure consistency in processing
-	
-	while (my $rawupload = <$fh>)
+	while (my $uploadline = $linefactory->())
 	{
-		if ($rowcounts < 0)
-		{
-			$rawupload = $peek . $rawupload;
-		}
-		
-		my uploadline = decode( $encoding, $rawupload );
-		
 		# initial processing
 		# fix up line endings
 		$uploadline =~ s/\r\n?/\n/g;
 		chomp $uploadline;
-		
-		# do any untainting 
-		$uploadline =~ /\A([0-9A-Za-z.,_\t -]+)\z/s or next;
-		
-		$uploadline = $1;
 		
 		# skip commented lines
 		next if $uploadline =~ /^\s*\#/;
@@ -1644,6 +1576,80 @@ sub error
 	print ("</body>\n</html>");
 
 	exit 1;
+}
+
+###########################################
+# detect text encoding for binary strings #
+###########################################
+sub detect_encoding
+{
+	my ($bytestring) = @_;
+	
+	return 'UTF-8' if $bytestring =~ /^\xEF\xBB\xBF/;
+	
+	return 'UTF-16LE' if $bytestring =~ /^\xFF\xFE/;
+	return 'UTF-16BE' if $bytestring =~ /^\xFE\xFF/;
+
+	return 'UTF-32BE' if $bytestring =~ /^\x00\x00\xFE\xFF/;
+	return 'UTF-32LE' if $bytestring =~ /^\xFF\xFE\x00\x00/;
+	
+	return undef;
+}
+
+###########################################
+# buffered file reader with text decoding #
+###########################################
+sub binary_to_text_reader
+{
+	my ($fh) = @_;
+	binmode($fh); # upload a raw byte stream
+	
+	my $rawbuffer = '';
+	my $decodedbuffer = '';
+	my $eof = 0;
+	
+	read($fh, $rawbuffer, READ_BUFFER);
+	
+	my $bytestring = $rawbuffer;
+    return undef unless $bytestring;
+	
+	$encoding = detect_encoding($bytestring);
+	
+	return sub {
+		while (1) {
+			# Return line if we have one
+			if ($decodedbuffer =~ s/^([0-9A-Za-z\.,_\t -\#]+\r?\n)//)
+			{
+				return $1;
+			}
+
+			# If EOF, return remainder
+			if ($eof)
+			{
+				if (length($decodedbuffer))
+				{
+					return $decodedbuffer;
+				} else
+				{
+					return undef;
+				}
+			}
+
+			# Decode what we have
+			my $decoded = decode($encoding, $rawbuffer, FB_PARTIAL);
+			$decodedbuffer .= $decoded;
+			$rawbuffer = '';
+
+			# Read more data
+			read($fh, $rawbuffer, READ_BUFFER);
+			
+			$bytestring = $rawbuffer;
+			if (!$bytestring)
+			{
+				$eof = 1;
+			}
+		}
+	};
 }
 
 ####################################
