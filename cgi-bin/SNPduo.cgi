@@ -4,7 +4,7 @@
 # SNPduo.cgi                  #
 # Author: Eli Roberson        #
 # Created: September 04, 2007 #
-# Edited: January 7, 2026     #
+# Edited: January 9, 2026     #
 ###############################
 
 use constant RENAME => "TRUE";
@@ -70,7 +70,7 @@ use constant OUTPUT_MAX => 1024 * 1024 * 50;
 ###################
 # set read buffer #
 ###################
-use constant => READ_BUFFER = 4096;
+use constant READ_BUFFER => 1024 * 256; # 256 kb chunks
 
 ##############################################################
 # WARNING!!!!!!!!!!!!!!                                      #
@@ -81,7 +81,8 @@ use constant => READ_BUFFER = 4096;
 # use declarations #
 ####################
 use CGI;
-use Encode qw(encode); #qw(decode encode);
+use Encode qw(decode FB_CROAK);
+use HTML::Entities qw(encode_entities);
 
 if ( PERLMAGICK eq "TRUE" and CAIRO eq "FALSE" )
 {
@@ -183,13 +184,6 @@ foreach $tmpChrom (@chromParam)
 	if ($tmpChrom =~ /^(\w*)$/)
 	{
 		$tmpChrom = $1;
-		
-		# this was a legacy error.
-		# i see no reason why it should still be checking.
-		#if ($platform eq "HapMap" & $tmpChrom eq "GenomeByChromosome")
-		#{
-		#	error ($cgi, "HapMap samples not allowed in \"Genome - By Chromosome\" mode");
-		#}
 	}
 	else
 	{
@@ -456,10 +450,20 @@ until (! -e "${dataDir}/${upload}")
 # Don't call upload until now so errors   #
 # happen before the file starts to upload #
 ###########################################
-my $uploadStart = time();
 my $fh = $cgi->upload( "file" ) or error( $cgi, "File upload did not begin properly" );
+binmode($fh, ':raw'); # required to peek raw bytes at beginning
 
-my $linefactory = binary_to_text_reader($fh); # untaint happens in reader function
+##############################
+# peek, check encode, rewind #
+##############################
+my $raw_buffer = '';
+my $readcharcount = read($fh, $raw_buffer, 1024);
+
+my $inputcoding = detect_encoding($raw_buffer);
+
+seek($fh, 0, 0);
+
+binmode($fh, ":encoding($inputcoding)");
 
 ################################
 # setup output for text upload #
@@ -471,6 +475,7 @@ binmode LOCAL, ':encoding(UTF-8)'; # set explicitly to output UTF-8
 # Start platform adjustments #
 ##############################
 my $rowcounts = -1; # Set the row count to -1 so that headers are ignored
+my $buffer = '';
 
 ############
 # Illumina #
@@ -673,29 +678,47 @@ elsif ($platform eq "HapMap")
 
 elsif ($platform eq "Custom")
 {
-	##########
-	# Custom #
-	##########
-	while (my $uploadline = $linefactory->())
+	########
+	########
+	while (1)
 	{
-		# initial processing
-		# fix up line endings
-		$uploadline =~ s/\r\n?/\n/g;
-		chomp $uploadline;
+		my $chunk;
+		my $readcharacters = read($fh, $chunk, READ_BUFFER);
 		
-		# skip commented lines
-		next if $uploadline =~ /^\s*\#/;
+		last unless $readcharacters;
 		
-		# skip empty lines
-		next if $uploadline =~ /^\s*$/;
+		$buffer .= $chunk;
 		
-		# get rid of stray hashes since R doesn't like them midstream
-		$uploadline =~ s/\#+//g;
-				
-		print LOCAL "$uploadline\n";
+		################
+		# clean buffer #
+		################
+		$buffer =~ s/^\x{FEFF}//; #strip BOM
+		$buffer =~ s/\r\n?/\n/g; # convert carriage return with or without newline to single newline
+		$buffer =~ s/(\#.*\n)/\n/g; # We're assuming hash means comment and will strip from hash to a newline
+		$buffer =~ s/\n+/\n/g; # collapse any blank lines
 		
-		++$rowcounts; # Autoincrement the row count
+		#############################
+		# if we match expected good #
+		# characters, write to file #
+		#############################
+		# use this match filter to ensure it's only characters we expect
+		if ($buffer =~ s/^([0-9a-zA-Z \.,_\-\t\n]+)//)
+		{
+			$output = $1;
+			$copy = $output;
+			
+			# count newlines
+			while($copy =~ s/\n//g)
+			{
+				++$rowcounts; # Autoincrement the row count
+			}
+			
+			# write to files
+			print LOCAL $output;
+		}
 	}
+	
+	++$rowcounts; # in case there's no trailing newline
 
 	WriteRTemplate( $codeDir,$dataDir,$upload,$chrom,$chromList,$rComparisonIndexString,$compiledDir,$rowcounts,$postscriptWidth,$postscriptHeight,$genomeBuild, $totalNumberOfComparisons,$delimiter,$makePostscript, $runmode,$segmentation, 0 ); 
 }
@@ -1569,11 +1592,14 @@ sub error
 {
 	my ($out, $message) = @_;
 	
-	print $out->header("text/html");
-	print ("<html>\n<head>\n<title>Error Page\n</title>\n\n<style type=\"text/css\">\ntable {margin-left: auto; margin-right: auto}\ntr {text-align: center; vertical-align: middle}\nth {text-align: center}\nbody {font-family: verdana, arial, helvetica, sans-serif}\n</style>\n</head>\n<body>\n");
+	print "Content-Type: text/html; charset=UTF-8\n\n";
+	binmode(STDOUT, ':encoding(UTF-8)');
 	
-	print ("<p>An error has occurred during file processing\n<br>Error message: ${message}\n</p>\n");
-	print ("</body>\n</html>");
+	print "<html>\n<head>\n<title>Error Page\n</title>\n\n<style type=\"text/css\">\ntable {margin-left: auto; margin-right: auto}\ntr {text-align: center; vertical-align: middle}\nth {text-align: center}\nbody {font-family: verdana, arial, helvetica, sans-serif}\n</style>\n</head>\n<body>\n";
+
+	print "<p>An error has occurred during file processing\n<br>Error message: " . encode_entities(${message}) . "\n</p>\n";
+	
+	print "</body>\n</html>";
 
 	exit 1;
 }
@@ -1593,63 +1619,13 @@ sub detect_encoding
 	return 'UTF-32BE' if $bytestring =~ /^\x00\x00\xFE\xFF/;
 	return 'UTF-32LE' if $bytestring =~ /^\xFF\xFE\x00\x00/;
 	
-	return undef;
-}
-
-###########################################
-# buffered file reader with text decoding #
-###########################################
-sub binary_to_text_reader
-{
-	my ($fh) = @_;
-	binmode($fh); # upload a raw byte stream
+	# test whether we can decode UTF-8. If no, assume latin1.
+	eval {
+		decode('UTF-8', $bytestring, FB_CROAK);
+		1;
+    } or return 'Windows-1252';
 	
-	my $rawbuffer = '';
-	my $decodedbuffer = '';
-	my $eof = 0;
-	
-	read($fh, $rawbuffer, READ_BUFFER);
-	
-	my $bytestring = $rawbuffer;
-    return undef unless $bytestring;
-	
-	$encoding = detect_encoding($bytestring);
-	
-	return sub {
-		while (1) {
-			# Return line if we have one
-			if ($decodedbuffer =~ s/^([0-9A-Za-z\.,_\t -\#]+\r?\n)//)
-			{
-				return $1;
-			}
-
-			# If EOF, return remainder
-			if ($eof)
-			{
-				if (length($decodedbuffer))
-				{
-					return $decodedbuffer;
-				} else
-				{
-					return undef;
-				}
-			}
-
-			# Decode what we have
-			my $decoded = decode($encoding, $rawbuffer, FB_PARTIAL);
-			$decodedbuffer .= $decoded;
-			$rawbuffer = '';
-
-			# Read more data
-			read($fh, $rawbuffer, READ_BUFFER);
-			
-			$bytestring = $rawbuffer;
-			if (!$bytestring)
-			{
-				$eof = 1;
-			}
-		}
-	};
+	return 'UTF-8'; # in case it's non-BOM UTF-8
 }
 
 ####################################

@@ -68,6 +68,7 @@ RUN apt-get update && \
     libwww-perl \
     libcgi-pm-perl \
     libimage-magick-perl \
+    libhtml-entities-perl \
     zip \
     apache2
 
