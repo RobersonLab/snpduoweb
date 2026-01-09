@@ -708,7 +708,7 @@ elsif ($platform eq "Custom")
 			$copy = $output;
 			
 			# count newlines
-			while($copy =~ s/\n//g)
+			while($copy =~ s/\n//)
 			{
 				++$rowcounts; # Autoincrement the row count
 			}
