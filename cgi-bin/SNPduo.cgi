@@ -494,21 +494,25 @@ if ($platform eq "Illumina")
 		################
 		# clean buffer #
 		################
-		$buffer =~ s/^\x{FEFF}//; #strip BOM
+		if ($rowcounts<0)
+		{
+			$buffer =~ s/^\x{FEFF}//; #strip BOM
+		}
+		
 		$buffer =~ s/\r\n?/\n/g; # convert carriage return with or without newline to single newline
-		$buffer =~ s/(\#.*\n)/\n/g; # We're assuming hash means comment and will strip from hash to a newline
-		$buffer =~ s/\n+/\n/g; # collapse any blank lines
+		$buffer =~ s/#[^\n]*\n//g; # We're assuming hash means comment and will strip from hash to a newline
+		$buffer =~ s/\n{2,}/\n/g; # collapse any blank lines
 		
 		##############################
 		# platform specific cleaning #
 		##############################
-		$buffer =~ =~ s/\.GType//g; # Illumina adds .GType headers sometimes
+		$buffer =~ s/\.GType//g; # Illumina adds .GType headers sometimes
 		
 		# fixup chromosome column name
-		$buffer =~ s/([ ,\t\n]?)Position([ ,\t\n]?)/$1Physical.Position$2/g;
+		$buffer =~ s/(?<!\.)\bPosition\b/Physical.Position/g;
 		
 		# fixup position column name
-		$buffer =~ s/([ ,\t\n]?)Chr([ ,\t\n]?)/$1Chromosome$2/g;
+		$buffer =~ s/\bChr\b/Chromosome/g;
 		
 		#############################
 		# if we match expected good #
@@ -521,10 +525,7 @@ if ($platform eq "Illumina")
 			$copy = $output;
 			
 			# count newlines
-			while($copy =~ s/\n//)
-			{
-				++$rowcounts; # Autoincrement the row count
-			}
+			$rowcounts += ($copy =~ tr/\n//); # count number of newlines
 			
 			# write to files
 			print LOCAL $output;
@@ -550,10 +551,14 @@ elsif ($platform eq "Affymetrix4")
 		################
 		# clean buffer #
 		################
-		$buffer =~ s/^\x{FEFF}//; #strip BOM
+		if ($rowcounts<0)
+		{
+			$buffer =~ s/^\x{FEFF}//; #strip BOM
+		}
+		
 		$buffer =~ s/\r\n?/\n/g; # convert carriage return with or without newline to single newline
-		$buffer =~ s/(\#.*\n)/\n/g; # We're assuming hash means comment and will strip from hash to a newline
-		$buffer =~ s/\n+/\n/g; # collapse any blank lines
+		$buffer =~ s/#[^\n]*\n//g; # We're assuming hash means comment and will strip from hash to a newline
+		$buffer =~ s/\n{2,}/\n/g; # collapse any blank lines
 		
 		##############################
 		# platform specific cleaning #
@@ -564,7 +569,7 @@ elsif ($platform eq "Affymetrix4")
 		$buffer =~ s/\.loh//g;
 		
 		# missing CNAT data is a NoCall
-		$buffer =~ s/${delimiter}(${delimiter}|\n)/${delimiter}NoCall$1/g;
+		$buffer =~ s/${delimiter}([${delimiter}\n])/${delimiter}NoCall$1/g;
 		
 		#############################
 		# if we match expected good #
@@ -577,10 +582,7 @@ elsif ($platform eq "Affymetrix4")
 			$copy = $output;
 			
 			# count newlines
-			while($copy =~ s/\n//)
-			{
-				++$rowcounts; # Autoincrement the row count
-			}
+			$rowcounts += ($copy =~ tr/\n//); # count number of newlines
 			
 			# write to files
 			print LOCAL $output;
@@ -609,7 +611,6 @@ elsif ($platform eq "HapMap")
 		$HapMapDelimiter = " ";
 	}
 	
-	###########################################################
 	##########
 	# HapMap #
 	##########
@@ -627,7 +628,8 @@ elsif ($platform eq "HapMap")
 		################
 		$buffer =~ s/^\x{FEFF}//; #strip BOM
 		$buffer =~ s/\r\n?/\n/g; # convert carriage return with or without newline to single newline
-		$buffer =~ s/\n+/\n/g; # collapse any blank lines
+		$buffer =~ s/#[^\n]*\n//g; # We're assuming hash means comment and will strip from hash to a newline
+		$buffer =~ s/\n{2,}/\n/g; # collapse any blank lines
 		
 		#################################
 		# this case is more complicated #
@@ -636,19 +638,13 @@ elsif ($platform eq "HapMap")
 		# the necessary per-line proce- #
 		# -ssing.                       #
 		#################################
-		while ($buffer =~ s/^([0-9A-Za-z\.,_\t -\#]+\n)//)
+		while ($buffer =~ s/^([0-9A-Za-z\.,_\t -]+\n)//)
 		{
 			my $uploadline = $1;
 			chomp $uploadline;
 			
-			# skip commented lines
-			next if $uploadline =~ /^\s*\#/;
-			
 			# skip empty lines
 			next if $uploadline =~ /^\s*$/;
-			
-			# get rid of stray hashes since R doesn't like them midstream
-			$uploadline =~ s/\#+//g;
 			
 			# Split data up for printing
 			my ($rs, $allele, $chromosome, $position, $strand, $build, $center, $prot, $assay, $panel, $QC, @genotypes) = split(/$HapMapDelimiter/, $uploadline );
@@ -714,19 +710,19 @@ elsif ($platform eq "HapMap")
 					$gen2 = "N";
 				}
 				
-				$genotype = $gen1 . $gen2;
-				
-				if ($genotype eq "BA")
+				my $outgenotype = $gen1 . $gen2;
+					
+				if ($outgenotype eq "BA")
 				{
-					$genotype = "AB";
+					$outgenotype = "AB";
 				}
 				
 				if ($gen1 eq 'N' || $gen2 eq 'N')
 				{
-					$genotype = "NC";
+					$outgenotype = "NC";
 				}
 				
-				print LOCAL "${HapMapDelimiter}${genotype}"; # Print the transformed data
+				print LOCAL "${HapMapDelimiter}${outgenotype}"; # Print the transformed data
 			}
 			
 			print LOCAL "\n"; # Print an end of line
@@ -742,11 +738,16 @@ elsif ($platform eq "HapMap")
 		my $uploadline = $buffer;
 		chomp $uploadline;
 		
+		################
+		# clean buffer #
+		################
+		$buffer =~ s/^\x{FEFF}//; #strip BOM
+		$buffer =~ s/\r\n?/\n/g; # convert carriage return with or without newline to single newline
+		$buffer =~ s/#[^\n]*\n//g; # We're assuming hash means comment and will strip from hash to a newline
+		$buffer =~ s/\n{2,}/\n/g; # collapse any blank lines
+		
 		unless( $uploadline =~ /^\s*\#/ || $uploadline =~ /^\s*$/ )
 		{
-			# get rid of stray hashes since R doesn't like them midstream
-			$uploadline =~ s/\#+//g;
-			
 			# Split data up for printing
 			my ($rs, $allele, $chromosome, $position, $strand, $build, $center, $prot, $assay, $panel, $QC, @genotypes) = split(/$HapMapDelimiter/, $uploadline );
 			
@@ -807,19 +808,19 @@ elsif ($platform eq "HapMap")
 						$gen2 = "N";
 					}
 					
-					$genotype = $gen1 . $gen2;
+					my $outgenotype = $gen1 . $gen2;
 					
-					if ($genotype eq "BA")
+					if ($outgenotype eq "BA")
 					{
-						$genotype = "AB";
+						$outgenotype = "AB";
 					}
 					
 					if ($gen1 eq 'N' || $gen2 eq 'N')
 					{
-						$genotype = "NC";
+						$outgenotype = "NC";
 					}
 					
-					print LOCAL "${HapMapDelimiter}${genotype}"; # Print the transformed data
+					print LOCAL "${HapMapDelimiter}${outgenotype}"; # Print the transformed data
 				}
 				
 				print LOCAL "\n"; # Print an end of line
@@ -839,17 +840,22 @@ elsif ($platform eq "Custom")
 		my $chunk;
 		my $readcharacters = read($fh, $chunk, READ_BUFFER);
 		
-		last unless $readcharacters;
+		# error if $readcharacters is undef. #unless defined $readcharacters;
+		last if $readcharacters == 0;
 		
 		$buffer .= $chunk;
 		
 		################
 		# clean buffer #
 		################
-		$buffer =~ s/^\x{FEFF}//; #strip BOM
+		if ($rowcounts<0)
+		{
+			$buffer =~ s/^\x{FEFF}//; #strip BOM
+		}
+		
 		$buffer =~ s/\r\n?/\n/g; # convert carriage return with or without newline to single newline
-		$buffer =~ s/(\#.*\n)/\n/g; # We're assuming hash means comment and will strip from hash to a newline
-		$buffer =~ s/\n+/\n/g; # collapse any blank lines
+		$buffer =~ s/#[^\n]*\n//g; # We're assuming hash means comment and will strip from hash to a newline
+		$buffer =~ s/\n{2,}/\n/g; # collapse any blank lines
 		
 		#############################
 		# if we match expected good #
@@ -862,10 +868,7 @@ elsif ($platform eq "Custom")
 			$copy = $output;
 			
 			# count newlines
-			while($copy =~ s/\n//)
-			{
-				++$rowcounts; # Autoincrement the row count
-			}
+			$rowcounts += ($copy =~ tr/\n//); # count number of newlines
 			
 			# write to files
 			print LOCAL $output;
@@ -1751,7 +1754,7 @@ sub error
 	
 	print "<html>\n<head>\n<title>Error Page\n</title>\n\n<style type=\"text/css\">\ntable {margin-left: auto; margin-right: auto}\ntr {text-align: center; vertical-align: middle}\nth {text-align: center}\nbody {font-family: verdana, arial, helvetica, sans-serif}\n</style>\n</head>\n<body>\n";
 
-	print "<p>An error has occurred during file processing\n<br>Error message: " . encode_entities(${message}) . "\n</p>\n";
+	print "<p>An error has occurred during file processing\n<br>Error message: " . encode_entities($message) . "\n</p>\n";
 	
 	print "</body>\n</html>";
 
