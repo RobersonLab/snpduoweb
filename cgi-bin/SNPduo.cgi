@@ -482,78 +482,112 @@ my $buffer = '';
 ############
 if ($platform eq "Illumina")
 {
-	while (my $uploadline = $linefactory->())
+	while (1)
 	{
-		# initial processing
-		# fix up line endings
-		$uploadline =~ s/\r\n?/\n/g;
-		chomp $uploadline;
+		my $chunk;
+		my $readcharacters = read($fh, $chunk, READ_BUFFER);
 		
-		# skip commented lines
-		next if $uploadline =~ /^\s*\#/;
+		last unless $readcharacters;
 		
-		# skip empty lines
-		next if $uploadline =~ /^\s*$/;
+		$buffer .= $chunk;
 		
-		# get rid of stray hashes since R doesn't like them midstream
-		$uploadline =~ s/\#+//g;
-		   
-		# Make the header something the script will find. Substitute Chr field for Chromosome
-		$uploadline =~ s/^Chr${delimiter}/Chromosome${delimiter}/g;
-		$uploadline =~ s/${delimiter}Chr${delimiter}/${delimiter}Chromosome${delimiter}/g;
-		$uploadline =~ s/${delimiter}Chr\n/${delimiter}Chromosome\n/g;
+		################
+		# clean buffer #
+		################
+		$buffer =~ s/^\x{FEFF}//; #strip BOM
+		$buffer =~ s/\r\n?/\n/g; # convert carriage return with or without newline to single newline
+		$buffer =~ s/(\#.*\n)/\n/g; # We're assuming hash means comment and will strip from hash to a newline
+		$buffer =~ s/\n+/\n/g; # collapse any blank lines
 		
-
-		# Adjust the name of the position column
-		$uploadline =~ s/^Position${delimiter}/Physical.Position${delimiter}/g;
-		$uploadline =~ s/${delimiter}Position${delimiter}/${delimiter}Physical.Position${delimiter}/g;
-		$uploadline =~ s/${delimiter}Position\n/${delimiter}Physical.Position\n/g;
+		##############################
+		# platform specific cleaning #
+		##############################
+		$buffer =~ =~ s/\.GType//g; # Illumina adds .GType headers sometimes
 		
-		# Get read or .GType suffix on genotype columns
-		$uploadline =~ s/\.GType//g;
+		# fixup chromosome column name
+		$buffer =~ s/([ ,\t\n]?)Position([ ,\t\n]?)/$1Physical.Position$2/g;
 		
-		print LOCAL "$uploadline\n";
+		# fixup position column name
+		$buffer =~ s/([ ,\t\n]?)Chr([ ,\t\n]?)/$1Chromosome$2/g;
 		
-		++$rowcounts; # Autoincrement the row count
+		#############################
+		# if we match expected good #
+		# characters, write to file #
+		#############################
+		# use this match filter to ensure it's only characters we expect
+		if ($buffer =~ s/^([0-9a-zA-Z \.,_\-\t\n]+)//)
+		{
+			$output = $1;
+			$copy = $output;
+			
+			# count newlines
+			while($copy =~ s/\n//)
+			{
+				++$rowcounts; # Autoincrement the row count
+			}
+			
+			# write to files
+			print LOCAL $output;
+		}
 	}
+	
+	++$rowcounts; # in case there's no trailing newline
 
 	WriteRTemplate( $codeDir,$dataDir,$upload,$chrom,$chromList,$rComparisonIndexString,$compiledDir,$rowcounts,$postscriptWidth,$postscriptHeight,$genomeBuild, $totalNumberOfComparisons,$delimiter,$makePostscript, $runmode,$segmentation, 0 );
 }
 
 elsif ($platform eq "Affymetrix4")
 {	
-	##############
-	# Affymetrix #
-	##############
-	while (my $uploadline = $linefactory->())
+	while (1)
 	{
-		# initial processing
-		# fix up line endings
-		$uploadline =~ s/\r\n?/\n/g;
-		chomp $uploadline;
+		my $chunk;
+		my $readcharacters = read($fh, $chunk, READ_BUFFER);
 		
-		# skip commented lines
-		next if $uploadline =~ /^\s*\#/;
+		last unless $readcharacters;
 		
-		# skip empty lines
-		next if $uploadline =~ /^\s*$/;
+		$buffer .= $chunk;
 		
-		# get rid of stray hashes since R doesn't like them midstream
-		$uploadline =~ s/\#+//g;
+		################
+		# clean buffer #
+		################
+		$buffer =~ s/^\x{FEFF}//; #strip BOM
+		$buffer =~ s/\r\n?/\n/g; # convert carriage return with or without newline to single newline
+		$buffer =~ s/(\#.*\n)/\n/g; # We're assuming hash means comment and will strip from hash to a newline
+		$buffer =~ s/\n+/\n/g; # collapse any blank lines
 		
-		# New CNAT No Calls are blanks. Substitute so the program sees them
-		$uploadline =~ s/${delimiter}${delimiter}/${delimiter}NoCall${delimiter}/g;
-		$uploadline =~ s/${delimiter}\n/${delimiter}NoCall\n/g;
-		
+		##############################
+		# platform specific cleaning #
+		##############################
 		# Remove annoying suffixes
-		$uploadline =~ s/_Call//g;
-		$uploadline =~ s/\.brlmm//g;
-		$uploadline =~ s/\.loh//g;
+		$buffer =~ s/_Call//g;
+		$buffer =~ s/\.brlmm//g;
+		$buffer =~ s/\.loh//g;
 		
-		print LOCAL "$uploadline\n";
+		# missing CNAT data is a NoCall
+		$buffer =~ s/${delimiter}(${delimiter}|\n)/${delimiter}NoCall$1/g;
 		
-		++$rowcounts; # Autoincrement of the row count
+		#############################
+		# if we match expected good #
+		# characters, write to file #
+		#############################
+		# use this match filter to ensure it's only characters we expect
+		if ($buffer =~ s/^([0-9a-zA-Z \.,_\-\t\n]+)//)
+		{
+			$output = $1;
+			$copy = $output;
+			
+			# count newlines
+			while($copy =~ s/\n//)
+			{
+				++$rowcounts; # Autoincrement the row count
+			}
+			
+			# write to files
+			print LOCAL $output;
+		}
 	}
+	
+	++$rowcounts; # in case there's no trailing newline
 
 	WriteRTemplate( $codeDir,$dataDir,$upload,$chrom,$chromList,$rComparisonIndexString,$compiledDir,$rowcounts,$postscriptWidth,$postscriptHeight,$genomeBuild, $totalNumberOfComparisons,$delimiter,$makePostscript, $runmode,$segmentation, 1 );
 }
@@ -575,102 +609,224 @@ elsif ($platform eq "HapMap")
 		$HapMapDelimiter = " ";
 	}
 	
+	###########################################################
 	##########
 	# HapMap #
 	##########
-	while (my $uploadline = $linefactory->())
+	while (1)
 	{
-		# initial processing
-		# fix up line endings
-		$uploadline =~ s/\r\n?/\n/g;
+		my $chunk;
+		my $readcharacters = read($fh, $chunk, READ_BUFFER);
+		
+		last unless $readcharacters;
+		
+		$buffer .= $chunk;
+		
+		################
+		# clean buffer #
+		################
+		$buffer =~ s/^\x{FEFF}//; #strip BOM
+		$buffer =~ s/\r\n?/\n/g; # convert carriage return with or without newline to single newline
+		$buffer =~ s/\n+/\n/g; # collapse any blank lines
+		
+		#################################
+		# this case is more complicated #
+		# we need to repeatedly split   #
+		# the buffer into lines to do   #
+		# the necessary per-line proce- #
+		# -ssing.                       #
+		#################################
+		while ($buffer =~ s/^([0-9A-Za-z\.,_\t -\#]+\n)//)
+		{
+			my $uploadline = $1;
+			chomp $uploadline;
+			
+			# skip commented lines
+			next if $uploadline =~ /^\s*\#/;
+			
+			# skip empty lines
+			next if $uploadline =~ /^\s*$/;
+			
+			# get rid of stray hashes since R doesn't like them midstream
+			$uploadline =~ s/\#+//g;
+			
+			# Split data up for printing
+			my ($rs, $allele, $chromosome, $position, $strand, $build, $center, $prot, $assay, $panel, $QC, @genotypes) = split(/$HapMapDelimiter/, $uploadline );
+			
+			# Before printing anything, check alleles to see how many there are.
+			# If there are more than two, skip it.
+
+			my @alleletest = split /\//, $allele;
+			
+			if(scalar(@alleletest) > 2)
+			{
+				next;
+			}
+			
+			# Change chr and pos to the same as others
+			$chromosome =~ s/chrom/Chromosome/g;
+			$chromosome =~ s/chr//g;
+			$position =~ s/pos/Physical.Position/g;
+			
+			# Print the chromosome and position
+			print LOCAL "${chromosome}${HapMapDelimiter}${position}";
+			
+			if (scalar(@alleletest) < 2)
+			{
+				foreach $name (@genotypes)
+				{
+					print LOCAL "${HapMapDelimiter}${name}";
+				}
+				next;
+			}
+			
+			# Change genotypes
+			my ($Aallele, $Ballele) = split /\//, $allele; # Split the two alleles specified into two different scalars
+			
+			# Run a loop that will substitute the genotypes
+			foreach $genotype (@genotypes)
+			{
+				my ($gen1, $gen2) = split(//,$genotype);
+				
+				if ($gen1 eq $Aallele)
+				{
+					$gen1="A";
+				}
+				elsif ($gen1 eq $Ballele)
+				{
+					$gen1="B";
+				}
+				else
+				{
+					$gen1 = "N";
+				}
+				
+				if ($gen2 eq $Aallele)
+				{
+					$gen2="A";
+				}
+				elsif ($gen2 eq $Ballele)
+				{
+					$gen2="B";
+				}
+				else
+				{
+					$gen2 = "N";
+				}
+				
+				$genotype = $gen1 . $gen2;
+				
+				if ($genotype eq "BA")
+				{
+					$genotype = "AB";
+				}
+				
+				if ($gen1 eq 'N' || $gen2 eq 'N')
+				{
+					$genotype = "NC";
+				}
+				
+				print LOCAL "${HapMapDelimiter}${genotype}"; # Print the transformed data
+			}
+			
+			print LOCAL "\n"; # Print an end of line
+			
+			++$rowcounts; # Autoincrement the row count
+		}
+	}
+	
+	# it's possible buffer ended without a newline character.
+	# we need to check if the buffer is empty to be sure
+	if (length($buffer))
+	{
+		my $uploadline = $buffer;
 		chomp $uploadline;
 		
-		# skip commented lines
-		next if $uploadline =~ /^\s*\#/;
-		
-		# skip empty lines
-		next if $uploadline =~ /^\s*$/;
-		
-		# get rid of stray hashes since R doesn't like them midstream
-		$uploadline =~ s/\#+//g;
-		
-		# Split data up for printing
-		my ($rs, $allele, $chromosome, $position, $strand, $build, $center, $prot, $assay, $panel, $QC, @genotypes) = split(/$HapMapDelimiter/, $uploadline );
-		
-		# Before printing anything, check alleles to see how many there are.
-		# If there are more than two, skip it.
-
-		my @alleletest = split /\//, $allele;
-		
-		if(scalar(@alleletest) > 2)
+		unless( $uploadline =~ /^\s*\#/ || $uploadline =~ /^\s*$/ )
 		{
-			next;
+			# get rid of stray hashes since R doesn't like them midstream
+			$uploadline =~ s/\#+//g;
+			
+			# Split data up for printing
+			my ($rs, $allele, $chromosome, $position, $strand, $build, $center, $prot, $assay, $panel, $QC, @genotypes) = split(/$HapMapDelimiter/, $uploadline );
+			
+			# Change chr and pos to the same as others
+			$chromosome =~ s/chrom/Chromosome/g;
+			$chromosome =~ s/chr//g;
+			$position =~ s/pos/Physical.Position/g;
+			
+			# Before printing anything, check alleles to see how many there are.
+			# If there are more than two, skip it.
+			my @alleletest = split /\//, $allele;
+			
+			unless(scalar(@alleletest)>2)
+			{
+				# Print the chromosome and position
+				print LOCAL "${chromosome}${HapMapDelimiter}${position}";
+				
+				if (scalar(@alleletest) < 2)
+				{
+					foreach $name (@genotypes)
+					{
+						print LOCAL "${HapMapDelimiter}${name}";
+					}
+					next;
+				}
+				
+				# Change genotypes
+				my ($Aallele, $Ballele) = split /\//, $allele; # Split the two alleles specified into two different scalars
+				
+				# Run a loop that will substitute the genotypes
+				foreach $genotype (@genotypes)
+				{
+					my ($gen1, $gen2) = split(//,$genotype);
+					
+					if ($gen1 eq $Aallele)
+					{
+						$gen1="A";
+					}
+					elsif ($gen1 eq $Ballele)
+					{
+						$gen1="B";
+					}
+					else
+					{
+						$gen1 = "N";
+					}
+					
+					if ($gen2 eq $Aallele)
+					{
+						$gen2="A";
+					}
+					elsif ($gen2 eq $Ballele)
+					{
+						$gen2="B";
+					}
+					else
+					{
+						$gen2 = "N";
+					}
+					
+					$genotype = $gen1 . $gen2;
+					
+					if ($genotype eq "BA")
+					{
+						$genotype = "AB";
+					}
+					
+					if ($gen1 eq 'N' || $gen2 eq 'N')
+					{
+						$genotype = "NC";
+					}
+					
+					print LOCAL "${HapMapDelimiter}${genotype}"; # Print the transformed data
+				}
+				
+				print LOCAL "\n"; # Print an end of line
+				
+				++$rowcounts; # Autoincrement the row count
+			}
 		}
-		
-		# Change chr and pos to the same as others
-		$chromosome =~ s/chrom/Chromosome/g;
-		$chromosome =~ s/chr//g;
-		$position =~ s/pos/Physical.Position/g;
-		
-		# Print the chromosome and position
-		print LOCAL "${chromosome}${HapMapDelimiter}${position}";
-		
-		if (scalar(@alleletest) < 2)
-		{
-			foreach $name (@genotypes)
-			{
-				print LOCAL "${HapMapDelimiter}${name}";
-			}
-			next;
-		}
-		
-		# Change genotypes
-		my ($Aallele, $Ballele) = split /\//, $allele; # Split the two alleles specified into two different scalars
-		
-		# Run a loop that will substitute the genotypes
-		foreach $genotype (@genotypes)
-		{
-			my ($gen1, $gen2) = split(//,$genotype);
-			
-			if ($gen1 eq $Aallele)
-			{
-				$gen1="A";
-			}
-			elsif ($gen1 eq $Ballele)
-			{
-				$gen1="B";
-			}
-			else
-			{
-				$gen1 = "N";
-			}
-			
-			if ($gen2 eq $Aallele)
-			{
-				$gen2="A";
-			}
-			elsif ($gen2 eq $Ballele)
-			{
-				$gen2="B";
-			}
-			else
-			{
-				$gen2 = "C";
-			}
-			
-			$genotype = $gen1 . $gen2;
-			
-			if ($genotype eq "BA")
-			{
-				$genotype = "AB";
-			}
-			
-			print LOCAL "${HapMapDelimiter}${genotype}"; # Print the transformed data
-		}
-		
-		print LOCAL "\n"; # Print an end of line
-		
-		++$rowcounts; # Autoincrement the row count
 	}
 	
 	WriteRTemplate( $codeDir,$dataDir,$upload,$chrom,$chromList,$rComparisonIndexString,$compiledDir,$rowcounts,$postscriptWidth,$postscriptHeight,$genomeBuild, $totalNumberOfComparisons,$delimiter,$makePostscript, $runmode,$segmentation, 0 );
@@ -678,8 +834,6 @@ elsif ($platform eq "HapMap")
 
 elsif ($platform eq "Custom")
 {
-	########
-	########
 	while (1)
 	{
 		my $chunk;
