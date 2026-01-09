@@ -450,6 +450,8 @@ until (! -e "${dataDir}/${upload}")
 # Don't call upload until now so errors   #
 # happen before the file starts to upload #
 ###########################################
+my $uploadStart = time();
+
 my $fh = $cgi->upload( "file" ) or error( $cgi, "File upload did not begin properly" );
 binmode($fh, ':raw'); # required to peek raw bytes at beginning
 
@@ -626,7 +628,11 @@ elsif ($platform eq "HapMap")
 		################
 		# clean buffer #
 		################
-		$buffer =~ s/^\x{FEFF}//; #strip BOM
+		if ($rowcounts<0)
+		{
+			$buffer =~ s/^\x{FEFF}//; #strip BOM
+		}
+		
 		$buffer =~ s/\r\n?/\n/g; # convert carriage return with or without newline to single newline
 		$buffer =~ s/#[^\n]*\n//g; # We're assuming hash means comment and will strip from hash to a newline
 		$buffer =~ s/\n{2,}/\n/g; # collapse any blank lines
@@ -660,9 +666,14 @@ elsif ($platform eq "HapMap")
 			}
 			
 			# Change chr and pos to the same as others
-			$chromosome =~ s/chrom/Chromosome/g;
-			$chromosome =~ s/chr//g;
-			$position =~ s/pos/Physical.Position/g;
+			if ($rowcounts<0)
+			{
+				# these are headers and should only be changed on the first buffer
+				$chromosome =~ s/\bchrom\b/Chromosome/g;
+				$position =~ s/\bpos\b/Physical.Position/g;
+			}
+			
+			$chromosome =~ s/^chr//;
 			
 			# Print the chromosome and position
 			print LOCAL "${chromosome}${HapMapDelimiter}${position}";
@@ -741,7 +752,11 @@ elsif ($platform eq "HapMap")
 		################
 		# clean buffer #
 		################
-		$buffer =~ s/^\x{FEFF}//; #strip BOM
+		if ($rowcounts<0)
+		{
+			$buffer =~ s/^\x{FEFF}//; #strip BOM
+		}
+		
 		$buffer =~ s/\r\n?/\n/g; # convert carriage return with or without newline to single newline
 		$buffer =~ s/#[^\n]*\n//g; # We're assuming hash means comment and will strip from hash to a newline
 		$buffer =~ s/\n{2,}/\n/g; # collapse any blank lines
@@ -752,9 +767,14 @@ elsif ($platform eq "HapMap")
 			my ($rs, $allele, $chromosome, $position, $strand, $build, $center, $prot, $assay, $panel, $QC, @genotypes) = split(/$HapMapDelimiter/, $uploadline );
 			
 			# Change chr and pos to the same as others
-			$chromosome =~ s/chrom/Chromosome/g;
-			$chromosome =~ s/chr//g;
-			$position =~ s/pos/Physical.Position/g;
+			if ($rowcounts<0)
+			{
+				# these are headers and should only be changed on the first buffer
+				$chromosome =~ s/\bchrom\b/Chromosome/g;
+				$position =~ s/\bpos\b/Physical.Position/g;
+			}
+			
+			$chromosome =~ s/^chr//;
 			
 			# Before printing anything, check alleles to see how many there are.
 			# If there are more than two, skip it.
