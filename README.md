@@ -61,6 +61,13 @@ Installing the web-interfaced version of SNPduo has minimal requirements:
 * R statistical programming software - having an R version with cairo graphic support helps enormously
 * Image Magick
 
+On Ubuntu, these packages were also needed:
+* libwww-perl
+* libcgi-pm-perl
+* libimage-magick-perl
+* libhtml-entities-perl
+* zip
+
 ### Download repo
 Clone the SNPduo Web repository from GitHub. Switching to the newest tag is highly recommended.
 
