@@ -1248,11 +1248,11 @@ whole_genome_plot = function( genotype_data,
   
   if ( makeBED )
   {
-    chromList = unique( genotype_data[,chr] )
+    chromList = unique( genotype_data[,index_chrom_col] )
     
     for ( chromIndex in 1:length( chromList ) )
     {
-      chromValues = which( genotype_data[,chr] == chromList[ chromIndex ] )
+      chromValues = which( genotype_data[,index_chrom_col] == chromList[ chromIndex ] )
       
       ibsTmp = ibsVector[ chromValues ]
       positionTmp = genotype_data[chromValues,pos]
