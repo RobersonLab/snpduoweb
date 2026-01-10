@@ -174,17 +174,17 @@ draw_cytobands = function( chromosome, cytoband, drawLabels = TRUE, miny = 0, ma
 # plots where the whole genome is viewed #
 # on one image.                          #
 ##########################################
-chromosome_labeling = function( chr.offset, yvalue )
+chromosome_labeling = function( chr_offset, yvalue )
 {
   ######################################################################################################
   # A function that simply places labels for each chromosome in the plot with the genome in one frame. #
   ######################################################################################################
-  num.rows = length( chr.offset )
+  num.rows = length( chr_offset )
   plot.text = c( 1:22, "X" )
   
   for ( i in 2:num.rows )
   {
-    text( ( ( chr.offset[i] + chr.offset[(i - 1)]) / 2) , yvalue, plot.text[i - 1], cex = 0.95 )
+    text( ( ( chr_offset[i] + chr_offset[(i - 1)]) / 2) , yvalue, plot.text[i - 1], cex = 0.95 )
   }
 }
 
@@ -311,11 +311,11 @@ genotypes_to_integers = function( genotypes )
 # this function is used to plot vertical #
 # lines at chromosome boundaries.        #
 ##########################################
-draw_genome_chromosome_boundaries = function( chr.offset, plot.min, plot.max )
+draw_genome_chromosome_boundaries = function( chr_offset, plot.min, plot.max )
 {
   for ( i in 2:24 )
   {
-    lines( c ( rep ( chr.offset[i], 2 ) ), c( plot.min, plot.max ) )
+    lines( c ( rep ( chr_offset[i], 2 ) ), c( plot.min, plot.max ) )
   }
 }
 

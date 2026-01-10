@@ -1,7 +1,7 @@
-###########################
+############################
 #	snpduo_code_template.R #
 #	Author: Eli Roberson   #
-##########################
+############################
 
 source( "SCRIPT_SOURCE" )
 
@@ -66,7 +66,7 @@ if ( MODE != "Tabulate" )
 	
 			if( chrom == "Genome" )
 			{
-				whole_genome_plot( input, ind1, ind2, savename=upload, pswidth, psheight, comparison=comparisonVector[comparisonVectorCounter], doPostscript=makepostscript, makeBED = BED, doPNG=makePNG, chr.offset=load_chromosome_position_offsets( compiled, genomebuild ) )
+				whole_genome_plot( input, ind1, ind2, savename=upload, pswidth, psheight, comparison=comparisonVector[comparisonVectorCounter], doPostscript=makepostscript, makeBED = BED, doPNG=makePNG, chr_offset=load_chromosome_position_offsets( compiled, genomebuild ) )
 			} else if ( chrom == "GenomeByChromosome" )
 			{
 				genome_by_chromosome( input,ind1, ind2, savename=upload, pswidth, psheight, comparison=comparisonVector[comparisonVectorCounter], doPostscript=makepostscript,chromlist=chromList, makeBED = BED, doPNG=makePNG )
