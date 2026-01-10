@@ -693,21 +693,21 @@ segment_ibs_blocks = function ( ibs, position, chromosome, maximumDist = NULL, m
 #  Used for single chromosome comparisons   #
 #  and for Genome By Chromosome comparisons #
 #############################################
-snpduo_single_chromosome = function( genotypeData, chromosome, ind1, ind2, savename, pagewidth, pageheight, bychromosome = FALSE, cexScale = 0.20, comparison = "None", pchValue=20,doPostscript = TRUE, makeBED = TRUE, doPNG=FALSE, DPI=72, THUMBNAIL=FALSE )
+snpduo_single_chromosome = function( genotype_data, chromosome, ind1, ind2, savename, pagewidth, pageheight, bychromosome = FALSE, cexScale = 0.20, comparison = "None", pchValue=20,doPostscript = TRUE, makeBED = TRUE, doPNG=FALSE, DPI=72, THUMBNAIL=FALSE )
 {  
   if ( !doPNG & THUMBNAIL ) { THUMBNAIL = FALSE } # We only allow thumbnail generation if doPNG is set
   
   ###############################################################
   # Find the columns containing chromosome and position by grep #
   ###############################################################
-  pos = grep( "Physical.Position", names( genotypeData ) )
-  chr = grep( "Chromosome", names( genotypeData ) )
+  pos = grep( "Physical.Position", names( genotype_data ) )
+  chr = grep( "Chromosome", names( genotype_data ) )
   
   #################################################################
   # R converts spaces to dots. For printing gsub dots for spaces. #
   #################################################################
-  printInd1 = gsub( "\\.", " ", names( genotypeData )[ind1] )
-  printInd2 = gsub( "\\.", " ", names( genotypeData )[ind2] )
+  printInd1 = gsub( "\\.", " ", names( genotype_data )[ind1] )
+  printInd2 = gsub( "\\.", " ", names( genotype_data )[ind2] )
   
   ###############
   # Error check #
@@ -726,10 +726,10 @@ snpduo_single_chromosome = function( genotypeData, chromosome, ind1, ind2, saven
   # Find which rows match the chromosome of interest #
   ####################################################
   if ( chromosome != "M" ) {
-    currIndex = which( genotypeData[,chr] == chromosome )
+    currIndex = which( genotype_data[,chr] == chromosome )
   } else
   {
-    currIndex = which( genotypeData[,chr] %in% c( "M", "MT", "Mito", "MITO" ) )
+    currIndex = which( genotype_data[,chr] %in% c( "M", "MT", "Mito", "MITO" ) )
   }
   
   ###############
@@ -743,7 +743,7 @@ snpduo_single_chromosome = function( genotypeData, chromosome, ind1, ind2, saven
   ##################################################################################################
   # Subset the data so that only the part containing the chromosome you are interested in is used. #
   ##################################################################################################
-  curr = genotypeData[currIndex,]
+  curr = genotype_data[currIndex,]
   
   ################################################################################################
   # For numeric chromosomes make sure they are in numeric form by running chrom_convert_to_integer function #
@@ -1248,14 +1248,14 @@ whole_genome_plot = function( genotype_data,
   
   if ( makeBED )
   {
-    chromList = unique( genotypeData[,chr] )
+    chromList = unique( genotype_data[,chr] )
     
     for ( chromIndex in 1:length( chromList ) )
     {
-      chromValues = which( genotypeData[,chr] == chromList[ chromIndex ] )
+      chromValues = which( genotype_data[,chr] == chromList[ chromIndex ] )
       
       ibsTmp = ibsVector[ chromValues ]
-      positionTmp = genotypeData[chromValues,pos]
+      positionTmp = genotype_data[chromValues,pos]
       
       segment_ibs_blocks( ibs=ibsTmp, 
                           position=positionTmp, 
@@ -1529,14 +1529,14 @@ tabulate_ibs = function ( dataObject, chromosomeVector, individualColumns, saven
 # making appropriate single summary files #
 # and appropriately naming each one.      #
 ###########################################
-genome_by_chromosome = function ( genotypeData, ind1, ind2, savename, pswidth, psheight, comparison = "None", doPostscript = TRUE, chromlist = NULL, makeBED = TRUE, doPNG=FALSE, DPI=72 )
+genome_by_chromosome = function ( genotype_data, ind1, ind2, savename, pswidth, psheight, comparison = "None", doPostscript = TRUE, chromlist = NULL, makeBED = TRUE, doPNG=FALSE, DPI=72 )
 {
-  printInd1 = gsub( "\\.", " ", names( genotypeData )[ ind1 ] )
-  printInd2 = gsub( "\\.", " ", names( genotypeData )[ ind2 ] )
+  printInd1 = gsub( "\\.", " ", names( genotype_data )[ ind1 ] )
+  printInd2 = gsub( "\\.", " ", names( genotype_data )[ ind2 ] )
   
   if ( is.null( chromlist ) )
   {
-    chromlist = unique( genotypeData$Chromosome )
+    chromlist = unique( genotype_data$Chromosome )
   }
   
   write.table( chromlist, file = paste( savename, "_", comparison, ".chromlist", sep="" ), row.names = FALSE, col.names = FALSE, quote = FALSE, sep = "\t" )
@@ -1546,6 +1546,6 @@ genome_by_chromosome = function ( genotypeData, ind1, ind2, savename, pswidth, p
   for ( i in 1:length( chromlist ) )
   {
     chrom = chromlist[i]
-    snpduo_single_chromosome( genotypeData,chrom, ind1, ind2, savename, pswidth, psheight, bychromosome = TRUE, comparison = comparison, doPostscript = doPostscript, makeBED = makeBED, doPNG=doPNG, DPI=DPI, THUMBNAIL=TRUE )
+    snpduo_single_chromosome( genotype_data,chrom, ind1, ind2, savename, pswidth, psheight, bychromosome = TRUE, comparison = comparison, doPostscript = doPostscript, makeBED = makeBED, doPNG=doPNG, DPI=DPI, THUMBNAIL=TRUE )
   }
 }
