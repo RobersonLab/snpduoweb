@@ -1017,9 +1017,9 @@ snpduo_single_chromosome = function( genotypeData, chromosome, ind1, ind2, saven
 # Function to plot the whole genome on #
 # a single image.                      #
 ########################################
-whole_genome_plot = function( genotypeData, 
-                              ind1, 
-                              ind2, 
+whole_genome_plot = function( genotype_data, 
+                              index_ind1, 
+                              index_ind2, 
                               savename, 
                               pagewidth, 
                               pageheight, 
@@ -1037,24 +1037,38 @@ whole_genome_plot = function( genotypeData,
     stop( "Chromosome offsets were not passed!!!" )
   }
   
-  index_position_col = grep( "Physical.Position", names( genotypeData ) )
-  index_chrom_col = grep( "Chromosome", names( genotypeData ) )
+  input_names <- colnames( genotype_data )
   
-  label_ind1 = gsub( "\\.", " ", names( genotypeData )[ind1] )
-  label_ind2 = gsub( "\\.", " ", names( genotypeData )[ind2] )
+  index_position_col = grep( "Physical.Position", input_names )
+  index_chrom_col = grep( "Chromosome", input_names )
   
-  genotypeData = genotypeData[ which( genotypeData[,index_chrom_col] %in% c( 1:24, "X", "Y" ) ), ]
+  label_ind1 = gsub( "\\.", " ", input_names[index_ind1] )
+  label_ind2 = gsub( "\\.", " ", input_names[index_ind2] )
   
-  fortext = data.frame( "Chromosome" = genotypeData[,index_chrom_col], "Physical Position" = genotypeData[,index_position_col], "IBS" = -1, "tmp1" = genotypeData[,ind1], "tmp2" = genotypeData[,ind2] )
+  acceptable_chromosomes = c( 1:25, "X", "Y", "M" )
+  index_usable_snps = which( genotype_data[,index_chrom_col] %in% acceptable_chromosomes )
   
-  size = dim( genotypeData )[1]
+  if (!(length(index_usable_snps) > 0)) {
+    stop( "No chromosomes match expected values!!!" )
+  }
+  
+  genotype_data = genotype_data[ index_usable_snps, ]
+  
+  fortext = data.frame( "Chromosome" = genotype_data[,index_chrom_col], 
+                        "Physical Position" = genotype_data[,index_position_col], 
+                        "IBS" = -1, 
+                        "tmp1" = genotype_data[,index_ind1], 
+                        "tmp2" = genotype_data[,index_ind2] )
+  
+  size = nrow( genotype_data )
     
-  outputchroms = chrom_convert_to_integer( genotypeData[,index_chrom_col] )
-  physPos = as.integer( genotypeData[ ,index_position_col ] )
-  physPos = physPos + chr_offset[ outputchroms ]
+  outputchroms = chrom_convert_to_integer( genotype_data[,index_chrom_col] )
+  
+  physPos = as.integer( genotype_data[,index_position_col] )
+  physPos = physPos + chr_offset[outputchroms]
 
-  gen1 = genotypes_to_integers( genotypeData[,ind1] )
-  gen2 = genotypes_to_integers( genotypeData[,ind2] )
+  gen1 = genotypes_to_integers( genotype_data[,index_ind1] )
+  gen2 = genotypes_to_integers( genotype_data[,index_ind2] )
   
   ##############
   # Score SNPs #
@@ -1076,27 +1090,28 @@ whole_genome_plot = function( genotypeData,
   ###############
   # Average IBS #
   ###############
-  avg.ibs = round( mean( ibsVector, na.rm = TRUE ), 3 )
+  avg_ibs = round( mean( ibsVector, na.rm = TRUE ), 3 )
   
   ################################
   # Genotype Summary Information #
   ################################
-  ind1.AA = Cdata[['ind1aa']]
-  ind1.AB = Cdata[['ind1ab']]
-  ind1.BB = Cdata[['ind1bb']]
-  ind1.NC = Cdata[['ind1nc']]
+  ind1_AA = Cdata[['ind1aa']]
+  ind1_AB = Cdata[['ind1ab']]
+  ind1_BB = Cdata[['ind1bb']]
+  ind1_NC = Cdata[['ind1nc']]
 
-  ind2.AA = Cdata[['ind2aa']]
-  ind2.AB = Cdata[['ind2ab']]
-  ind2.BB = Cdata[['ind2bb']]
-  ind2.NC = Cdata[['ind2nc']]
+  ind2_AA = Cdata[['ind2aa']]
+  ind2_AB = Cdata[['ind2ab']]
+  ind2_BB = Cdata[['ind2bb']]
+  ind2_NC = Cdata[['ind2nc']]
   
   if ( doPostscript == TRUE || doPNG == TRUE )
   {
     ##############
     # Tick Marks #
     ##############
-    maxpos = max( chr_offset[25] ) # The 25th slot gives the whole genome size of that version of the genome
+    maxpos = max( chr_offset[25] ) # 25th slot gives max offset.
+                                   # this works well enough for us
     
     # Use function to find tick marks
     ticks = tick_marks_and_axis_labels( maxpos )
@@ -1104,17 +1119,17 @@ whole_genome_plot = function( genotypeData,
     posprefix = ticks[['plotLabel']]
     ticks = ticks[['ticks']]
     
-    max.tmp = maxpos
+    max_tmp = maxpos
     
     if ( max( ticks ) > maxpos )
     {
-      max.tmp = max( ticks )
+      max_tmp = max( ticks )
     }
     
     # Jittering
-    ibs.jittered = jitter( ibsVector, amount = 0.20 ) + 13
-    gen1.jittered = jitter( gen1, amount = 0.20 ) + 8
-    gen2.jittered = jitter( gen2, amount = 0.20 ) + 3
+    ibs_jittered = jitter( ibsVector, amount = 0.20 ) + 13
+    gen1_jittered = jitter( gen1, amount = 0.20 ) + 8
+    gen2_jittered = jitter( gen2, amount = 0.20 ) + 3
     
     while ( doPostscript || doPNG )
     {
@@ -1123,60 +1138,86 @@ whole_genome_plot = function( genotypeData,
         ######
         # ps #
         ######
-        postscript( file = paste(savename,"_", comparison,".ps", sep=""), paper = "special", width = pagewidth, height = pageheight, horizontal = TRUE )
+        postscript( file = paste0(savename,"_", comparison,".ps"), 
+                    paper = "special", 
+                    width = pagewidth, 
+                    height = pageheight, 
+                    horizontal = TRUE )
       } else if (doPNG)
       {
         #######
         # PNG #
         #######
-        png( filename=paste(savename,"_", comparison,".png", sep=""), width=round(pagewidth*72,0), height=round(pageheight*72,0), units="px", bg="white", type="cairo", antialias="default", res=DPI )
+        png( filename=paste0(savename,"_", comparison,".png"), 
+             width=round(pagewidth*72,0), 
+             height=round(pageheight*72,0), 
+             units="px", 
+             bg="white", 
+             type="cairo", 
+             antialias="default", 
+             res=DPI )
       }
       
-      plot.min = 0
-      plot.max = 16
+      plot_min = 0
+      plot_max = 16
       par( "mar" = c( 5, 4, 3, 5 ) + 0.1 )
+      
       plot.new()
-      plot.window( xlim = c( 1, max.tmp ), ylim = c( plot.min,plot.max ) )
-      title( paste( "Genome-wide SNPduo Output\n", printInd1, " - ", printInd2, "\nAverage IBS: ", avg.ibs, sep="" ) )
+      plot.window( xlim = c( 1, max_tmp ), 
+                   ylim = c( plot_min, plot_max ) )
+      
+      title( paste0( "Genome-wide SNPduo Output\n", 
+                    label_ind1, 
+                    " - ", 
+                    label_ind2, 
+                    "\nAverage IBS: ", avg_ibs ) )
+      
       title( xlab = paste( "Physical Position", posprefix ) )
       
-      points( physPos, ibs.jittered, cex = cexScale, pch = pchValue )
-      points( physPos, gen1.jittered, cex = cexScale, pch = pchValue )
-      points( physPos, gen2.jittered, cex = cexScale, pch = pchValue )
+      points( physPos, ibs_jittered, cex = cexScale, pch = pchValue )
+      points( physPos, gen1_jittered, cex = cexScale, pch = pchValue )
+      points( physPos, gen2_jittered, cex = cexScale, pch = pchValue )
       
       axis( 1, at = ticks, labels = as.character( ticklabel ) )
       
       ibslab = c( 0,1,2 )
       genlab = c( 0,1,2,3 )
-      axis( 2, at = c( ( genlab + 3 ), ( genlab + 8 ), ( ibslab + 13 ) ), labels = c( "NC", "AA", "AB", "BB","NC", "AA", "AB", "BB", "0", "1", "2" ) , las = 1 )
+      axis( 2, 
+            at = c( ( genlab + 3 ), ( genlab + 8 ), ( ibslab + 13 ) ), 
+            labels = c( "NC", "AA", "AB", "BB","NC", "AA", "AB", "BB", "0", "1", "2" ) , 
+            las = 1 )
+      
       #########################################################################################################
       # Add in format command here to get formatted counts and split the axis 4 command into three statements #
       #########################################################################################################
-      axis( 4, at = c( ( genlab + 3 ), ( genlab + 8 ), ( ibslab + 13 ) ), c( paste( ind2.NC ), paste( ind2.AA ), paste( ind2.AB ), paste( ind2.BB ), paste( ind1.NC ), paste( ind1.AA ), paste( ind1.AB ), paste( ind1.BB ), paste( ibs0 ), paste( ibs1 ), paste( ibs2 ) ), las = 1 )
+      axis( 4, 
+            at = c( ( genlab + 3 ), ( genlab + 8 ), ( ibslab + 13 ) ), 
+            c( paste( ind2_NC ), paste( ind2_AA ), paste( ind2_AB ), paste( ind2_BB ), paste( ind1_NC ), paste( ind1_AA ), paste( ind1_AB ), paste( ind1_BB ), paste( ibs0 ), paste( ibs1 ), paste( ibs2 ) ), 
+            las = 1 )
       
       ###############
       # Side labels #
       ###############
-      mtext( "Genotype", line = 3,side = 2, at = 4.5,cex = 1.15 )
-      mtext( "Genotype", line = 3,side = 2, at = 9.5,cex = 1.15 )
-      mtext( "Identity by State", line = 3, side = 2, at = 14,cex = 1.15 )
+      mtext( "Genotype", line = 3, side = 2, at = 4.5, cex = 1.15 )
+      mtext( "Genotype", line = 3, side = 2, at = 9.5, cex = 1.15 )
+      mtext( "Identity by State", line = 3, side = 2, at = 14, cex = 1.15 )
       
       #################
       # Inside labels #
       #################
-      text( x = max.tmp / 2, y = 7, paste( printInd1 ) )
-      text( x = max.tmp / 2, y = 12, paste( printInd2 ) )
+      text( x = max_tmp / 2, y = 12, paste( label_ind1 ) )
+      text( x = max_tmp / 2, y = 7, paste( label_ind2 ) )
       
       ##########
       # Box it #
       ##########
-      rect( 0, 2.4, max.tmp, 15.6 )
+      rect( 0, 2.4, max_tmp, 15.6 )
       
       #####################
       # Chromosome Labels #
       #####################
-      draw_genome_chromosome_boundaries( chr.offset, 0, 2 )
-      chromosome_labeling( chr.offset, 1 )
+      draw_genome_chromosome_boundaries( chr_offset, 0, 2 )
+      chromosome_labeling( chr_offset, 1 )
       
       dev.off()
       
@@ -1196,10 +1237,14 @@ whole_genome_plot = function( genotypeData,
   fortext$IBS = ibsVector
   fortext = fortext[ order( physPos ), ]
   
-  names( fortext )[4] = paste( printInd1 )
-  names( fortext )[5] = paste( printInd2 )
+  names( fortext )[4] = paste( label_ind1 )
+  names( fortext )[5] = paste( label_ind2 )
   
-  write.table( fortext, row.names = FALSE, quote = FALSE, file = paste( savename,"_", comparison, ".summary.txt", sep = "" ), sep = "\t" )
+  write.table( fortext, 
+               row.names = FALSE, 
+               quote = FALSE, 
+               file = paste0( savename,"_", comparison, ".summary.txt"), 
+               sep = "\t" )
   
   if ( makeBED )
   {
@@ -1212,33 +1257,49 @@ whole_genome_plot = function( genotypeData,
       ibsTmp = ibsVector[ chromValues ]
       positionTmp = genotypeData[chromValues,pos]
       
-      segment_ibs_blocks( ibs=ibsTmp, position=positionTmp, chromosome=chromList[ chromIndex ], Ind1=printInd1, Ind2=printInd2, File=paste( savename,"_", comparison,  ".bedsummary.txt", sep = "" ), AppendLogical=TRUE )
+      segment_ibs_blocks( ibs=ibsTmp, 
+                          position=positionTmp, 
+                          chromosome=chromList[ chromIndex ], 
+                          Ind1=label_ind1, 
+                          Ind2=label_ind2, 
+                          File=paste0( savename,"_", comparison,  ".bedsummary.txt"), 
+                          AppendLogical=TRUE )
     }
   }
   
   genSummary = data.frame( "Genotype" = c( "AA", "AB", "BB", "NoCall" ), "tmp1" = 0, "tmp2" = 0 )
   
-  genSummary[1,2] = ind1.AA
-  genSummary[2,2] = ind1.AB
-  genSummary[3,2] = ind1.BB
-  genSummary[4,2] = ind1.NC
+  genSummary[1,2] = ind1_AA
+  genSummary[2,2] = ind1_AB
+  genSummary[3,2] = ind1_BB
+  genSummary[4,2] = ind1_NC
 
-  genSummary[1,3] = ind2.AA
-  genSummary[2,3] = ind2.AB
-  genSummary[3,3] = ind2.BB
-  genSummary[4,3] = ind2.NC
+  genSummary[1,3] = ind2_AA
+  genSummary[2,3] = ind2_AB
+  genSummary[3,3] = ind2_BB
+  genSummary[4,3] = ind2_NC
 
-  names( genSummary )[2] = paste( printInd1 )
-  names( genSummary )[3] = paste( printInd2 )
+  names( genSummary )[2] = paste( label_ind1 )
+  names( genSummary )[3] = paste( label_ind2 )
 
   # IBS
-  ibsSummary = data.frame( "Alleles Identical by State" = c( 0, 1, 2 ),"Counts" = 0 )
+  ibsSummary = data.frame( "Alleles Identical by State" = c( 0, 1, 2 ),
+                           "Counts" = 0 )
   ibsSummary[1,2] = ibs0
   ibsSummary[2,2] = ibs1
   ibsSummary[3,2] = ibs2  
   
-  write.table( genSummary, row.names = FALSE, quote = FALSE, file = paste( savename,"_", comparison, ".gensum", sep = "" ), sep = "\t" )
-  write.table( ibsSummary, row.names = FALSE, quote = FALSE, file = paste( savename,"_", comparison, ".ibssum", sep = "" ), sep = "\t" )
+  write.table( genSummary, 
+               row.names = FALSE, 
+               quote = FALSE, 
+               file = paste0( savename,"_", comparison, ".gensum" ), 
+               sep = "\t" )
+  
+  write.table( ibsSummary, 
+               row.names = FALSE, 
+               quote = FALSE, 
+               file = paste0( savename,"_", comparison, ".ibssum" ), 
+               sep = "\t" )
 }
 
 #############################################
