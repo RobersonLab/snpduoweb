@@ -75,7 +75,7 @@ get_maximum_cytoband_end = function( chromosome, cytobandInfo )
   
   if ( length( chromosome_index ) > 0 )
   {
-    return( max( cytobandInfo$chromEnd[numBands] ) )
+    return( max( cytobandInfo$chromEnd[chromosome_index] ) )
   }
   
   return( 0 )
