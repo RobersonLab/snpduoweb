@@ -18,7 +18,7 @@ FROM ubuntu:noble-20250127
 # what version? #
 #################
 # this must be a tag from the git repo
-ARG TAG=v1.5.0
+ARG TAG=v1.5.1
 
 ###########
 # setup R #
